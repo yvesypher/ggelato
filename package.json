@@ -1,0 +1,25 @@
+{
+  "name": "ggelato",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "man": "man"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "none": "webpack --config webpack.dev.js --mode=none",
+    "development": "webpack --config webpack.dev.js",
+    "production": "webpack --config webpack.prod.js",
+    "watch": "webpack --config webpack.dev.js -d --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "webpack": "^5.106.2",
+    "webpack-cli": "^7.0.2",
+    "webpack-merge": "^6.0.1"
+  }
+}
