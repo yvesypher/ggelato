@@ -1,3 +1,4 @@
 {
-  "ggelato": "./srcjs/widgets/ggelato.js"
+  "add_hierarchy": "./srcjs/widgets/add_hierarchy.js",
+  "add_hierarchy_hc": "./srcjs/widgets/add_hierarchy_hc.js"
 }
