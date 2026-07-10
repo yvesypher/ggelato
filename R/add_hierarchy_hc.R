@@ -234,10 +234,3 @@ add_hierarchy_hc <- function(plot, structure) {
     "
   )
 }
-
-
-#' @rdname add_hierarchy_hc
-#' @export
-add_hierarchy <- function(plot, structure) {
-  add_hierarchy_hc(plot, structure)
-}

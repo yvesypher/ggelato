@@ -59,7 +59,7 @@ return { activeKeys, constraints, depths };
 
 function isValidHierarchyOrder(proposedArray, constraints) {for (let rule of constraints) {let parentIdx = proposedArray.indexOf(rule.parent);let childIdx = proposedArray.indexOf(rule.child);if (parentIdx !== -1 && childIdx !== -1 && parentIdx > childIdx) return false;}return true;}
 
-const DEPTH_COLORS = ['#e63946', '#f4a261', '#4169E1', '#2a9d8f', '#264653', '#1d3557'];
+const DEPTH_COLORS = ['#e63946', '#f4a261', '#e9c46a', '#2a9d8f', '#264653', '#1d3557'];
 
 window.init_hierarchy = function(el, x) {el.querySelectorAll('.hierarchy-addon-container').forEach(ghost => ghost.remove());
 

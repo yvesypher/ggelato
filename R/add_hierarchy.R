@@ -9,7 +9,7 @@ add_hierarchy <- function(plot, structure) {
 
   addon_dep <- htmltools::htmlDependency(
     name = "add_hierarchy",
-    version = as.character(Sys.time()),
+    version = as.character(utils::packageVersion("ggelato")),
     package = "ggelato",
     src = "inst/htmlwidgets",
     script = "add_hierarchy.js",
