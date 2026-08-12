@@ -1,0 +1,14 @@
+dependencies:
+  - name: chartjs
+    version: 4.4.1
+    src: htmlwidgets/chartjs
+    script: chart.min.js
+  - name: d3
+    version: 7.9.0
+    src: htmlwidgets/d3
+    script:
+      - "d3.min.js"
+  - name: gig-styles
+    version: 1.0.0
+    src: htmlwidgets
+    stylesheet: assets/css/gig-styles.css

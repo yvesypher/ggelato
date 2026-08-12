@@ -41,9 +41,9 @@ p <- agg_tourism |>
          ) +
   geom_line()
 
-p1 <- ggplotly(p, tooltip = "text") |> layout(margin = list(r = 150))
+p1 <- ggplotly(p, tooltip = "text")
 
-add_hierarchy(p1, "(State/Region)*Purpose")
+add_hierarchy_plotly(p1, "(State/Region)*Purpose")
 
 ### Prison data
 
@@ -80,47 +80,160 @@ add_hierarchy(prison_plotly, "gender*legal*state")
 #### highchart ####
 
 tourism_hc_plot <- highchart() |>
-  hc_add_series(data = agg_tourism,
-                type = "line",
-                hcaes(x = Quarter,
-                      y = Trips,
-                      group = interaction(State, Region, Purpose)))
+  hc_add_series(
+    data = agg_tourism |>
+      tibble::as_tibble() |>
+      dplyr::mutate(Quarter = as.numeric(as.Date(Quarter))),
+    type = "line",
+    hcaes(x = Quarter, y = Trips, group = interaction(State, Region, Purpose))
+  )
 
 add_hierarchy_hc(
   tourism_hc_plot,
   "(State/Region)*Purpose"
 )
 
+#### dummy data #####
+#
+# locations <- tibble::tribble(
+#   ~Country,       ~State,              ~Region,
+#   "Australia",    "Victoria",           "Melbourne",
+#   "Australia",    "Victoria",           "Geelong",
+#   "Australia",    "New South Wales",    "Sydney",
+#   "Australia",    "New South Wales",    "Newcastle",
+#   "New Zealand",  "North Island",       "Auckland",
+#   "New Zealand",  "North Island",       "Wellington",
+#   "New Zealand",  "South Island",       "Christchurch",
+#   "New Zealand",  "South Island",       "Dunedin"
+# )
+#
+# quarters <- yearquarter(
+#   seq(
+#     as.Date("2022-01-01"),
+#     by = "quarter",
+#     length.out = 20
+#   )
+# )
+#
+# # Generate bottom-level series
+# dummy_data <- locations |>
+#   tidyr::crossing(
+#     Purpose = c("Business", "Holiday"),
+#     Channel = c("Online", "Agent"),
+#     Quarter = quarters
+#   ) |>
+#   group_by(Country, State, Region, Purpose, Channel) |>
+#   arrange(Quarter) |>
+#   mutate(
+#     time = row_number(),
+#     region_effect = as.numeric(factor(Region)) * 60,
+#     purpose_effect = if_else(Purpose == "Holiday", 250, 0),
+#     channel_effect = if_else(Channel == "Online", 120, 0),
+#     Trips = round(
+#       800 +
+#         region_effect +
+#         purpose_effect +
+#         channel_effect +
+#         12 * time +
+#         150 * sin(2 * pi * time / 4) +
+#         rnorm(n(), mean = 0, sd = 60)
+#     )
+#   ) |>
+#   ungroup() |>
+#   select(Country, State, Region, Purpose, Channel, Quarter, Trips) |>
+#   as_tsibble(
+#     index = Quarter,
+#     key = c(Country, State, Region, Purpose, Channel)
+#   )
+#
+# dummy_agg <- dummy_data |>
+#   aggregate_key((State/Region)*Purpose*Channel, Trips = sum(Trips)) |>
+#   mutate(across(c(State, Region, Purpose, Channel), as.character))
+#
+#
+# dummy_p <- dummy_agg |>
+#   ggplot(aes(x = Quarter,
+#              y = Trips,
+#              group = interaction(State, Region, Purpose, Channel),
+#              text = paste(
+#                "Quarter:", Quarter,
+#                "<br>Trips:", Trips,
+#                "<br>State:", State,
+#                "<br>Region:", Region,
+#                "<br>Purpose:", Purpose,
+#                "<br>Channel:", Channel)
+#   )
+#   ) +
+#   geom_line()
+#
+# dummy_p1 <- ggplotly(dummy_p, tooltip = "text") |> layout(margin = list(r = 150))
+#
+# add_hierarchy(dummy_p1, "(State/Region)*Purpose*Channel")
 
-##########
 
-w <- add_hierarchy(p1, "(State/Region)*Purpose")
+####### STL Decompostion #######
 
-deps <- htmltools::findDependencies(w)
+tourism_ft <- tourism |>
+  aggregate_key((State / Region)*Purpose, Trips = sum(Trips)) |>
+  features(Trips, feature_set(pkgs = "feasts")) |>
+  mutate(State = as.character(State), Region = as.character(Region), Purpose = as.character(Purpose)) |>
+  as.data.frame()
 
-lapply(deps, function(d) {
-  list(
-    name = d$name,
-    version = d$version,
-    src = d$src,
-    script = d$script
+tourism_agg <- tourism_ft |>
+  filter(State == "<aggregated>" | Region == "<aggregated>")
+
+stl_u <- tourism |>
+  aggregate_key((State / Region)*Purpose, Trips = sum(Trips)) |>
+  model(STL(Trips ~ season(window = "periodic"))) |>
+  components() |>
+  as.data.frame() |>
+  select(State, Region, Purpose, Quarter, Trips, trend, season_year, remainder) |>
+  mutate(
+    State = as.character(State),
+    Region = as.character(Region),
+    Purpose = as.character(Purpose),
+    Quarter = as.character(Quarter)
   )
-})
 
-dep <- deps[[which(grepl("hierarchy|add", vapply(deps, function(d) d$name, character(1)), ignore.case = TRUE))[1]]]
+stl_s <- tourism |>
+  aggregate_key((State / Region)*Purpose, Trips = sum(Trips)) |>
+  group_by_key() |>
+  mutate(Trips = (Trips - mean(Trips)) / sd(Trips)) |>
+  model(STL(Trips ~ season(window = "periodic"))) |>
+  components() |>
+  as.data.frame() |>
+  select(State, Region, Purpose, Quarter, Trips, trend, season_year, remainder) |>
+  mutate(
+    State = as.character(State),
+    Region = as.character(Region),
+    Purpose = as.character(Purpose),
+    Quarter = as.character(Quarter)
+  )
 
-script <- dep$script
-if (is.list(script)) {
-  script <- if (is.list(script[[1]])) script[[1]]$src else script[[1]]
-}
+gig_stldp(data = stl_u,
+          scaled = stl_s,
+          structure = "(State/Region)*Purpose",
+          time = "Quarter", value = "Trips")
 
-served_js <- file.path(dep$src$file, script)
+##### sunburst ####
 
-normalizePath(served_js)
+tourism_hts <- tourism |>
+  aggregate_key((State / Region) * Purpose,
+                Trips = sum(Trips)) |>
+  mutate(across(c(State, Region, Purpose),
+                as.character))
 
-grep(
-  "e9c46a|4169E1|DEPTH_COLORS",
-  readLines(served_js, warn = FALSE),
-  value = TRUE,
-  ignore.case = TRUE
-)
+gig_sunburst(tourism_hts,
+             structure = "(State/Region)*Purpose",
+             labels    = TRUE)
+
+tourism_ft <- tourism |>
+  aggregate_key((State / Region)*Purpose,
+                Trips = sum(Trips)) |>
+  features(Trips, feature_set(pkgs = "feasts")) |>
+  mutate(across(c(State, Region, Purpose),
+                as.character)) |>
+  as.data.frame()
+
+gig_point(data = tourism_ft,
+          structure = "(State/Region)*Purpose")

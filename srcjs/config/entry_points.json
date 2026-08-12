@@ -1,4 +1,8 @@
 {
   "add_hierarchy": "./srcjs/widgets/add_hierarchy.js",
-  "add_hierarchy_hc": "./srcjs/widgets/add_hierarchy_hc.js"
+  "add_hierarchy_hc": "./srcjs/widgets/add_hierarchy_hc.js",
+  "gig_stldp": "./srcjs/widgets/gig_stldp.js",
+  "add_hierarchy_plotly": "./srcjs/widgets/add_hierarchy_plotly.js",
+  "gig_sunburst": "./srcjs/widgets/gig_sunburst.js",
+  "gig_point": "./srcjs/widgets/gig_point.js"
 }

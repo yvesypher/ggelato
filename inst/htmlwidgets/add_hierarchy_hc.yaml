@@ -7,4 +7,4 @@ dependencies:
   - name: add-hierarchy-style
     version: 1.0.0
     src: htmlwidgets
-    stylesheet: add_hierarchy_hc.css
+    stylesheet: assets/css/add_hierarchy_hc.css

@@ -1,3 +1,8 @@
+import './widgets/gig_point.js'
+import './widgets/gig_sunburst.js'
+import './widgets/add_hierarchy_plotly.js'
+import './widgets/gig_stldp.js'
+import './widgets/gig_stldp.js'
 import './widgets/add_hierarchy_hc.js'
 import './widgets/add_hierarchy.js'
 import './widgets/geom_scoop.js'

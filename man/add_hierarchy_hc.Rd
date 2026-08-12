@@ -2,18 +2,31 @@
 % Please edit documentation in R/add_hierarchy_hc.R
 \name{add_hierarchy_hc}
 \alias{add_hierarchy_hc}
-\alias{add_hierarchy}
-\title{Add draggable hierarchy tree to a highcharter plot}
+\title{Add an interactive hierarchy widget to a Highcharts plot}
 \usage{
-add_hierarchy_hc(plot, structure)
-
-add_hierarchy(plot, structure)
+add_hierarchy_hc(
+  plot,
+  structure,
+  time_labels = c("auto", "quarter", "month", "year", "date", "none"),
+  width = NULL,
+  height = NULL
+)
 }
 \arguments{
-\item{plot}{A highcharter/htmlwidget object.}
+\item{plot}{A highchart/htmlwidget object.}
 
 \item{structure}{Hierarchy structure, e.g. "(State/Region)*Purpose".}
+
+\item{time_labels}{How to label a numeric x axis that holds day-numbers
+(R `Date` values serialized onto a linear axis). One of "auto"
+(detect quarter/month/date granularity from the data), "quarter",
+"month", "year", "date", or "none" (leave labels untouched).}
+
+\item{width, height}{Output size (any valid CSS unit). When omitted, the
+original Highcharter dimensions and sizing policy are preserved. In
+QMD/RMD, the original widget follows the document's global or per-chunk
+figure options.}
 }
 \description{
-Add draggable hierarchy tree to a highcharter plot
+Add an interactive hierarchy widget to a Highcharts plot
 }

@@ -2,15 +2,22 @@
 % Please edit documentation in R/add_hierarchy.R
 \name{add_hierarchy}
 \alias{add_hierarchy}
-\title{Add Hierarchy to Plot}
+\title{Add an Interactive Hierarchy Panel to a Plotly Plot}
 \usage{
 add_hierarchy(plot, structure)
 }
 \arguments{
 \item{plot}{A plotly object to which the hierarchy will be added.}
 
-\item{structure}{A string defining the hierarchy structure (e.g., "(State/Region)*Purpose").}
+\item{structure}{A string defining the hierarchy structure
+(e.g., `"(State/Region)*Purpose"`), where `/` denotes parent/child
+and `*` denotes crossed groupings.}
+}
+\value{
+The plotly object with the hierarchy add-on attached.
 }
 \description{
-Add Hierarchy to Plot
+Overlays a draggable, resizable hierarchy tree on an existing plotly
+widget for hierarchical time series. Levels can be reordered by dragging
+and toggled by clicking, and traces are restyled accordingly.
 }

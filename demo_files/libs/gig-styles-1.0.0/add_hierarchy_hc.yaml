@@ -1,0 +1,10 @@
+dependencies:
+  - name: d3
+    version: 7.9.0
+    src: htmlwidgets/d3
+    script:
+      - "d3.min.js"
+  - name: add-hierarchy-style
+    version: 1.0.0
+    src: htmlwidgets
+    stylesheet: assets/css/add_hierarchy_hc.css

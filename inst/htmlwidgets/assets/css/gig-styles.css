@@ -1,0 +1,188 @@
+/* ---------------------------------------------------------------
+   Plot- and toolbar-specific styles for gig_point, gig_stldp, and
+   gig_sunburst. Hierarchy widget styles live in hierarchy-core.css.
+   --------------------------------------------------------------- */
+
+/* ===== Shared gig_* frame and tooltip ===== */
+.gig-widget { display: flex; width: 100%; height: 100%; position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #fff; overflow: hidden; }
+.gig-tooltip { position: fixed; opacity: 0; pointer-events: none; z-index: 9999;
+  background: rgba(15, 23, 42, 0.92); color: #fff; border-radius: 6px;
+  padding: 8px 10px; font-size: 11px; line-height: 1.4; max-width: 260px;
+  transition: opacity .1s; transform: translate(10px, -50%); }
+.gig-tooltip-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
+
+/* ===== toolbar (gig_stldp / gig_sunburst) =====
+   linkvis-style: docked left (default) / docked top / floating vertical /
+   floating horizontal / minimized. Mode switches are instant - no fade
+   transitions - so relayout + chart resize stays fast. */
+.gig-toolbar { position: absolute; z-index: 40; display: flex; align-items: center;
+  gap: 8px; box-sizing: border-box;
+  background: rgba(255,255,255,0.96); border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+.gig-toolbar.gig-tb-docked-left { top: 8px; left: 8px; bottom: 8px; width: 48px;
+  flex-direction: column; justify-content: flex-start; padding: 10px 4px;
+  border-radius: 12px; }
+.gig-toolbar.gig-tb-docked-top { top: 8px; left: 8px; right: 8px; height: 48px;
+  flex-direction: row; justify-content: flex-start; padding: 4px 12px;
+  border-radius: 12px; }
+.gig-toolbar.gig-tb-float-v { flex-direction: column; width: 48px;
+  padding: 12px 4px; border-radius: 25px; }
+.gig-toolbar.gig-tb-float-h { flex-direction: row; height: 48px;
+  width: max-content; padding: 0 12px; border-radius: 25px; }
+.gig-toolbar.gig-tb-minimized { width: 44px; height: 44px; padding: 0;
+  border-radius: 50%; justify-content: center; cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.gig-toolbar.gig-tb-minimized:hover { box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
+.gig-toolbar.gig-tb-minimized > *:not(.gig-tb-handle-wrap) { display: none !important; }
+.gig-toolbar.gig-tb-minimized .gig-tb-handle { pointer-events: none; }
+
+/* separator + scaled/original switch (ported from linkvis) */
+.gig-separator { background: #cbd5e1; border-radius: 2px; flex-shrink: 0; }
+.gig-tb-docked-left .gig-separator, .gig-tb-float-v .gig-separator {
+  width: 20px; height: 2px; margin: 6px auto; }
+.gig-tb-docked-top .gig-separator, .gig-tb-float-h .gig-separator {
+  width: 2px; height: 20px; margin: auto 6px; }
+.gig-data-switch { position: relative; display: inline-block;
+  width: 100px; height: 36px; flex-shrink: 0; }
+.gig-data-switch input { opacity: 0; width: 0; height: 0; }
+.gig-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #333; border: 2px solid #333; border-radius: 36px;
+  overflow: hidden; transition: 0.3s; }
+.gig-knob { position: absolute; height: 28px; width: 28px; left: 3px; bottom: 2px;
+  background-color: #fff; border-radius: 50%; transition: 0.3s; z-index: 2; }
+.gig-label-text { position: absolute; top: 50%; transform: translateY(-50%);
+  font-size: 10px; font-weight: bold; text-transform: uppercase; color: #fff;
+  pointer-events: none; transition: opacity 0.3s ease; }
+.gig-label-original { right: 12px; opacity: 1; }
+.gig-label-scaled { left: 12px; opacity: 0; }
+.gig-data-switch input:checked + .gig-slider { background-color: #0072B2; border-color: #0072B2; }
+.gig-data-switch input:checked + .gig-slider .gig-knob { transform: translateX(64px); }
+.gig-data-switch input:checked + .gig-slider .gig-label-original { opacity: 0; }
+.gig-data-switch input:checked + .gig-slider .gig-label-scaled { opacity: 1; }
+/* rotate in vertical toolbars, exactly like linkvis */
+.gig-tb-docked-left .gig-data-switch, .gig-tb-float-v .gig-data-switch {
+  transform: rotate(90deg); margin: 34px 0; }
+.gig-tb-docked-top .gig-data-switch, .gig-tb-float-h .gig-data-switch {
+  transform: none; margin: 0 12px; }
+
+/* drag handle + its mode menu */
+.gig-tb-handle-wrap { position: relative; display: flex; align-items: center;
+  justify-content: center; }
+.gig-tb-handle { cursor: grab; display: flex; align-items: center;
+  justify-content: center; padding: 5px; color: #555; border-radius: 4px; }
+.gig-tb-handle:hover { background: rgba(0,0,0,0.05); }
+.gig-tb-handle:active { cursor: grabbing; }
+.gig-tb-menu { display: none; position: absolute; min-width: 150px;
+  background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15); padding: 5px 0;
+  flex-direction: column; z-index: 210; }
+.gig-tb-menu.show { display: flex; }
+.gig-tb-menu button { padding: 9px 14px; border: none; background: none;
+  width: 100%; text-align: left; font-size: 13px; color: #333; cursor: pointer; }
+.gig-tb-menu button:hover { background: #f4f4f4; }
+.gig-tb-menu .gig-tb-menu-sep { height: 1px; background: #eee; margin: 4px 0; }
+.gig-tb-menu .gig-tb-menu-primary { font-weight: 700; color: #0072B2; }
+
+/* vertical toolbars open flyouts to the right; horizontal ones open below */
+.gig-tb-docked-left .gig-tb-menu, .gig-tb-float-v .gig-tb-menu,
+.gig-tb-docked-left .gig-tool-menu, .gig-tb-float-v .gig-tool-menu {
+  top: 0; left: 100%; margin-left: 6px; }
+.gig-tb-docked-top .gig-tb-menu, .gig-tb-float-h .gig-tb-menu,
+.gig-tb-docked-top .gig-tool-menu, .gig-tb-float-h .gig-tool-menu {
+  top: 100%; left: 0; margin-top: 6px; margin-left: 0; }
+.gig-tb-docked-top .gig-tb-handle-wrap, .gig-tb-float-h .gig-tb-handle-wrap {
+  margin-right: 2px; }
+.gig-tool-btn { display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 36px; height: 36px; padding: 0;
+  background: transparent; border: none; border-radius: 6px; cursor: pointer;
+  color: #333; font-size: 18px; }
+.gig-tool-btn:hover { background: rgba(0,0,0,0.05); }
+.gig-tool-btn.active { background: rgba(0,114,178,0.15); color: #0072B2; }
+.gig-icon-svg { width: 22px; height: 22px; display: block; }
+.gig-tool-dropdown { position: relative; display: flex; justify-content: center; }
+.gig-tool-menu { display: none; position: absolute; min-width: 170px; background: #fff;
+  border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; overflow: visible;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 200; }
+.gig-tool-menu.show { display: block; }
+.gig-tool-menu a { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; font-size: 13px; color: #333; cursor: pointer;
+  border-bottom: 1px solid #f0f0f0; }
+.gig-tool-menu a:hover { background: #f4f4f4; }
+.gig-tool-menu a.active-mode { background: #e6f3fa; color: #0072B2; font-weight: 700; }
+.gig-tool-menu a.active-mode::after { content: '\2713'; font-weight: bold; }
+
+/* "Inverse Selection" parent row with a hover submenu for its two variants */
+.gig-tool-menu .gig-has-sub { position: relative; display: flex; align-items: center;
+  justify-content: space-between; padding: 10px 14px; font-size: 13px; color: #333;
+  cursor: default; border-bottom: 1px solid #f0f0f0; }
+.gig-tool-menu .gig-has-sub:hover { background: #f4f4f4; }
+.gig-tool-menu .gig-has-sub.active-mode { background: #e6f3fa; color: #0072B2; font-weight: 700; }
+.gig-sub-arrow { color: #94a3b8; margin-left: 10px; }
+.gig-tool-submenu { display: none; position: absolute; top: -1px; left: 100%;
+  min-width: 150px; background: #fff; border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px; overflow: hidden; box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  z-index: 220; }
+.gig-has-sub:hover .gig-tool-submenu { display: block; }
+
+/* ===== gig_stldp ===== */
+.gig-stldp-main { flex: 1; display: flex; flex-direction: column; min-width: 0;
+  padding: 8px 10px; position: relative; }
+.gig-stl-controls { display: flex; gap: 6px; margin-bottom: 6px; flex: none; }
+.gig-stl-chip { padding: 3px 12px; border: 1px solid #cbd5e1; border-radius: 12px;
+  background: #f8fafc; color: #64748b; font-size: 11px; cursor: pointer; }
+.gig-stl-chip.active { background: #0072B2; border-color: #0072B2; color: #fff; }
+.gig-stl-wrapper { flex: 1; position: relative; min-height: 0; }
+.gig-stl-wrapper.hidden { display: none; }
+.gig-stl-wrapper canvas { width: 100% !important; height: 100% !important; display: block; }
+.gig-stl-crosshair { position: absolute; border-left: 1.5px dashed rgba(0,114,178,0.6);
+  pointer-events: none; z-index: 50; display: none; }
+
+/* ===== gig_sunburst (look ported from hierarchy.css) ===== */
+.gig-sunburst-main { flex: 1; position: relative; min-width: 0;
+  box-sizing: border-box; overflow: hidden; }
+.gig-sunburst-main svg { width: 100%; height: 100%; display: block;
+  cursor: grab; touch-action: none; }
+.gig-sunburst-main svg:active { cursor: grabbing; }
+.gig-tree-node { cursor: pointer;
+  transition: fill 0.2s, stroke-width 0.2s, opacity 0.2s; }
+.gig-tree-node:hover { opacity: 0.85; }
+.gig-tree-label { font-family: inherit; fill: #1e293b; pointer-events: none;
+  opacity: 0; transition: opacity 0.2s;
+  text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; }
+.gig-tree-label.visible { opacity: 1; }
+.gig-tree-label-depth-0 { font-weight: 700; }
+.gig-tree-label-depth-1 { font-weight: 600; }
+.gig-tree-label-depth-2 { font-weight: 500; }
+.gig-sunburst-tooltip { display: none; position: absolute; z-index: 100;
+  background: rgba(255,255,255,0.95); border: 1px solid #e2e8f0; border-radius: 4px;
+  max-width: min(320px, calc(100% - 24px)); padding: 7px 10px;
+  font-size: 12px; font-weight: 500; color: #1e293b;
+  pointer-events: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  white-space: normal; }
+.gig-sunburst-tooltip-name { font-weight: 700; }
+.gig-sunburst-tooltip-path { margin-top: 2px; color: #64748b; font-size: 11px; }
+
+
+/* ===== gig_point (time series feature scatterplot, from linkvis) ===== */
+.gig-point-main { flex: 1; position: relative; min-width: 0;
+  box-sizing: border-box; overflow: hidden; display: flex;
+  align-items: center; justify-content: center; }
+.gig-scatter-grid { display: grid; flex: none;
+  grid-template-columns: 44px 1fr; grid-template-rows: 1fr 36px; gap: 0; }
+.gig-y-axis-area { grid-column: 1 / 2; grid-row: 1 / 2; position: relative; }
+.gig-chart-wrap { grid-column: 2 / 3; grid-row: 1 / 2; position: relative;
+  min-width: 0; min-height: 0; overflow: hidden; }
+.gig-chart-wrap canvas { width: 100% !important; height: 100% !important; display: block; }
+.gig-x-axis-area { grid-column: 2 / 3; grid-row: 2 / 3; display: flex;
+  align-items: center; justify-content: center; }
+.gig-axis-select { appearance: none; -webkit-appearance: none; background: transparent;
+  border: none; border-radius: 4px; padding: 4px 20px 4px 8px; font-family: inherit;
+  font-size: 13px; font-weight: 700; color: #333; cursor: pointer; text-align: center;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat; background-position: right 2px center; background-size: 8px; }
+.gig-axis-select:hover { background-color: rgba(0,0,0,0.04); }
+.gig-y-axis-area .gig-axis-select { position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center center;
+  white-space: nowrap; max-width: 300px; }

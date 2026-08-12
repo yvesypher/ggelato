@@ -1,386 +1,378 @@
-function parseStructure(structureStr) {let activeKeys = [];let constraints = [];let depths = {};
+/*
+ * add_hierarchy.js - plotly adapter
+ * Shared panel/logic comes from hierarchy-core; this file owns everything
+ * plotly-specific: splitting null-separated traces, reading aggregation
+ * levels from hover text, styling via Plotly.restyle, and the panel's
+ * resize handles + fit-to-container scaling.
+ */
 
-if (!structureStr || typeof structureStr !== 'string') {
-    return { activeKeys, constraints, depths };
+import {
+    createHierarchyPanel,
+    createPanelDocking,
+    createDepthColors,
+    requiredAncestors,
+    pinPanelPosition
+} from "../modules/hierarchy-core.js";
+
+const CLASS_PREFIX = "hierarchy";
+const AGGREGATED_PATTERN = /<aggregated>|&lt;aggregated&gt;|:na/g;
+const RESIZE_DIRECTIONS = ["n", "s", "e", "w", "nw", "ne", "sw", "se"];
+const FLOATING_RIGHT_MARGIN = 12;
+
+const aggregationCache = new WeakMap();
+
+/* ---------- trace handling (exported for tests) ---------- */
+
+export function splitTrace(trace) {
+    // Each segment MUST get its own line/marker objects: Plotly.restyle
+    // mutates these nested objects in place, so shared references would make
+    // every segment end up with the color of whichever trace is styled last.
+    const ownStyle = source => ({
+        ...source,
+        line: { ...(source.line || {}) },
+        marker: { ...(source.marker || {}) }
+    });
+
+    if (!trace.type?.includes("scatter") || !trace.x?.includes(null)) return [ownStyle(trace)];
+
+    const traces = [];
+    let start = 0;
+    const addSegment = end => {
+        if (end <= start) return;
+        const segment = ownStyle(trace);
+        ["x", "y", "text", "hovertext"].forEach(field => {
+            if (Array.isArray(trace[field])) segment[field] = trace[field].slice(start, end);
+        });
+        delete segment.uid;
+        traces.push(segment);
+    };
+
+    trace.x.forEach((value, index) => {
+        if (value == null || trace.y[index] == null) {
+            addSegment(index);
+            start = index + 1;
+        }
+    });
+    addSegment(trace.x.length);
+    return traces;
 }
 
-const cleanStr = structureStr.replace(/\s+/g, '');
-const tokens = cleanStr.match(/[^/*()]+|[\/\*\(\)]/g);
+export function getAggregationMap(trace, allKeys) {
+    if (aggregationCache.has(trace)) return aggregationCache.get(trace);
 
-if (!tokens) return { activeKeys, constraints, depths };
+    const values = Array.isArray(trace.text)
+        ? trace.text
+        : Array.isArray(trace.hovertext)
+            ? trace.hovertext
+            : [trace.text || trace.hovertext];
 
-let pos = 0;
+    let bestText = "";
+    let fewestAggregates = Infinity;
+    values.forEach(value => {
+        if (typeof value !== "string" || value.length < 5) return;
+        const count = (value.toLowerCase().replace(/\s+/g, "").match(AGGREGATED_PATTERN) || []).length;
+        if (count < fewestAggregates) {
+            bestText = value;
+            fewestAggregates = count;
+        }
+    });
 
-function parseExpression() {
-    let left = parseTerm();
-    while (pos < tokens.length && tokens[pos] === '*') {
-        pos++;
-        let right = parseTerm();
-        left = { roots: [...left.roots, ...right.roots], leaves: [...left.leaves, ...right.leaves] };
+    let map = null;
+    if (bestText) {
+        const text = bestText.toLowerCase()
+            .replace(/\s+/g, "")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">");
+        map = Object.fromEntries(allKeys.map(key => {
+            const prefix = `${key.toLowerCase()}:`;
+            const aggregated = !text.includes(prefix)
+                || text.includes(`${prefix}<aggregated>`)
+                || text.includes(`${prefix}na`);
+            return [key, aggregated];
+        }));
     }
-    return left;
+    aggregationCache.set(trace, map);
+    return map;
 }
 
-function parseTerm() {
-    let left = parseFactor();
-    while (pos < tokens.length && tokens[pos] === '/') {
-        pos++;
-        let right = parseFactor();
-        left.leaves.forEach(l => {
-            right.roots.forEach(r => {
-                if (!constraints.find(c => c.parent === l && c.child === r)) {
-                    constraints.push({ parent: l, child: r });
-                }
+export function computeTraceStyles(data, displayKeys, allKeys, constraints) {
+    const depthColors = createDepthColors(displayKeys.length);
+    const hiddenKeys = allKeys.filter(key => !displayKeys.includes(key));
+    const ancestorsByDepth = new Map();
+    const getAncestors = depth => {
+        if (!ancestorsByDepth.has(depth)) {
+            ancestorsByDepth.set(
+                depth,
+                requiredAncestors(displayKeys.slice(0, depth), constraints)
+            );
+        }
+        return ancestorsByDepth.get(depth);
+    };
+
+    const indices = [];
+    const styles = {
+        visible: [],
+        opacity: [],
+        "line.width": [],
+        "line.color": [],
+        "marker.color": []
+    };
+
+    data.forEach((trace, index) => {
+        if (!trace.type?.includes("scatter")) return;
+        indices.push(index);
+
+        const isAggregated = getAggregationMap(trace, allKeys);
+        let visible = false;
+        let depth = 0;
+
+        if (isAggregated) {
+            displayKeys.forEach((key, i) => {
+                if (!isAggregated[key]) depth = i + 1;
             });
+            const ancestors = getAncestors(depth);
+            visible = displayKeys.every((key, i) =>
+                i < depth ? !isAggregated[key] : isAggregated[key]
+            ) && hiddenKeys.every(key =>
+                ancestors.has(key) ? !isAggregated[key] : isAggregated[key]
+            );
+        }
+
+        const color = depthColors[depth];
+        styles.visible.push(visible);
+        styles.opacity.push(depth === displayKeys.length ? 0.6 : 1);
+        styles["line.width"].push(depth === 0 ? 4 : depth === displayKeys.length ? 1 : 2.5);
+        styles["line.color"].push(color);
+        styles["marker.color"].push(color);
+    });
+
+    return { indices, styles };
+}
+
+/* ---------- panel resize handles (plotly-only feature) ---------- */
+
+function attachResizeHandles(container, host, signal, onResizeEnd) {
+    const state = {
+        direction: null, x: 0, y: 0,
+        left: 0, top: 0, width: 0, height: 0, aspect: 1
+    };
+
+    RESIZE_DIRECTIONS.forEach(direction => {
+        const handle = document.createElement("div");
+        handle.className = `${CLASS_PREFIX}-resize-handle ${direction}`;
+        container.appendChild(handle);
+
+        handle.addEventListener("mousedown", event => {
+            event.preventDefault();
+            event.stopPropagation(); // don't start the core panel drag
+            const pinned = pinPanelPosition(container, host);
+            Object.assign(state, {
+                direction,
+                x: event.clientX,
+                y: event.clientY,
+                left: pinned.left,
+                top: pinned.top,
+                width: container.offsetWidth,
+                height: container.offsetHeight
+            });
+            state.aspect = state.width / state.height;
+        }, { signal });
+    });
+
+    document.addEventListener("mousemove", event => {
+        const { direction } = state;
+        if (!direction) return;
+        event.preventDefault();
+
+        const dx = event.clientX - state.x;
+        const dy = event.clientY - state.y;
+        const minSize = 60;
+        let width = state.width;
+        let height = state.height;
+        let left = state.left;
+        let top = state.top;
+
+        if (direction.includes("e")) width = Math.max(minSize, state.width + dx);
+        if (direction.includes("w")) {
+            width = Math.max(minSize, state.width - dx);
+            left = state.left + state.width - width;
+        }
+        if (direction.length === 2) {
+            height = width / state.aspect;
+        } else if (direction === "s") {
+            height = Math.max(minSize, state.height + dy);
+        } else if (direction === "n") {
+            height = Math.max(minSize, state.height - dy);
+        }
+        if (direction.includes("n")) top = state.top + state.height - height;
+
+        Object.assign(container.style, {
+            width: `${width}px`,
+            height: `${height}px`,
+            left: `${left}px`,
+            top: `${top}px`
         });
-        left = { roots: left.roots, leaves: right.leaves };
+    }, { signal });
+
+    document.addEventListener("mouseup", () => {
+        if (!state.direction) return;
+        state.direction = null;
+        onResizeEnd?.();
+    }, { signal });
+}
+
+/* ---------- widget entry ---------- */
+
+window.init_hierarchy = function initHierarchy(el, x) {
+    el.querySelectorAll(".hierarchy-addon-container").forEach(node => node.remove());
+    el._hierarchyAbortController?.abort();
+
+    const structure = x.hierarchy_structure;
+    if (!structure) return;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+    el._hierarchyAbortController = controller;
+
+    let docking = null;
+    let initialDockApplied = false;
+
+    const panel = createHierarchyPanel({
+        host: el,
+        structure,
+        signal,
+        onSelectionChange: () => updatePlotlyTraces(),
+        onPanelDragEnd: () => docking?.handleDragEnd()
+    });
+    if (!panel) return;
+
+    const { container, inner, allKeys, constraints } = panel;
+
+    const getPlot = () => el.classList.contains("js-plotly-plot")
+        ? el
+        : el.querySelector(".js-plotly-plot");
+
+    /* Edge docking via layout margins, with the original margin stored on the
+       layout as a receipt. Plotly mutates layout objects in place, so each
+       refresh first restores that recorded margin before calculating the new
+       docked layout.
+
+       The hierarchy panel replaces Plotly's right-hand legend. ggplotly can
+       leave a wide right margin sized for that legend even after showlegend
+       becomes false. Adding the panel band to that old margin creates the
+       large white gap between the plotting area and the hierarchy panel.
+       Therefore a right dock REPLACES the old right margin with the complete
+       panel band. When the panel floats over the plot, the obsolete legend
+       margin is reduced to a small edge margin so the plotting area expands
+       fully to the right. Other edges still add the band so axis labels and
+       titles retain their original space. */
+    docking = createPanelDocking({
+        host: el,
+        container,
+        signal,
+        // ggplotly graph divs can be narrower than the widget container;
+        // dock against the plot element so the panel hugs the plot.
+        getBounds: () => (getPlot() || el).getBoundingClientRect(),
+        applySpace: (side, band) => {
+            const plot = getPlot();
+            if (!plot?._fullLayout) return;
+
+            const sides = ["l", "r", "t", "b"];
+            const current = {};
+            sides.forEach(k => {
+                current[k] = plot.layout?.margin?.[k] ?? plot._fullLayout.margin[k];
+            });
+
+            // Restore the margin that existed before the previous dock. The
+            // subtraction fallback supports layouts made by older versions.
+            const previous = plot.layout?._hierarchyDock;
+            if (previous?.side) {
+                const k = previous.side[0];
+                current[k] = Number.isFinite(previous.base)
+                    ? previous.base
+                    : Math.max(0, current[k] - previous.band);
+            }
+
+            const baseMargins = { ...current };
+
+            const update = {
+                // The chip panel replaces the legend; a visible legend would
+                // also push the margin further out via automargin.
+                showlegend: false
+            };
+            sides.forEach(k => { update["margin." + k] = current[k]; });
+
+            // Keep the plot full-width whenever the panel is floating or is
+            // docked on an edge other than the right. The old right margin was
+            // normally reserved for the legend that this panel replaces.
+            update["margin.r"] = Math.min(current.r, FLOATING_RIGHT_MARGIN);
+
+            if (side) {
+                const k = side[0];
+                update["margin." + k] = side === "right"
+                    ? band
+                    : current[k] + band;
+            }
+
+            Plotly.relayout(plot, update);
+            if (plot.layout) {
+                plot.layout._hierarchyDock = side
+                    ? { side, band, base: baseMargins[side[0]] }
+                    : null;
+            }
+        }
+    });
+
+    // Resizing a docked panel changes how much space its edge needs.
+    attachResizeHandles(container, el, signal, () => docking?.refresh());
+
+    function updatePlotlyTraces() {
+        const plot = getPlot();
+        if (!plot?.data) {
+            setTimeout(updatePlotlyTraces, 150);
+            return;
+        }
+
+        // One-time split of null-separated traces; Plotly.react is
+        // asynchronous, so keep its promise and always restyle after it.
+        if (!plot._hierarchyReady) {
+            const splitData = plot.data.flatMap(splitTrace);
+            plot._hierarchyReady = splitData.length !== plot.data.length
+                ? Promise.resolve(Plotly.react(plot, splitData, plot.layout))
+                : Promise.resolve();
+        }
+        plot._hierarchyReady.then(() => {
+            const { indices, styles } = computeTraceStyles(
+                plot.data, panel.getDisplayKeys(), allKeys, constraints
+            );
+            if (indices.length) Plotly.restyle(plot, styles, indices);
+            if (!initialDockApplied) {
+                initialDockApplied = true;
+                docking.applyInitial();
+            }
+        });
     }
-    return left;
-}
 
-function parseFactor() {
-    if (pos >= tokens.length) return { roots: [], leaves: [] };
-    if (tokens[pos] === '(') {
-        pos++;
-        let expr = parseExpression();
-        if (pos < tokens.length && tokens[pos] === ')') pos++;
-        return expr;
-    } else {
-        let val = tokens[pos++];
-        if (!activeKeys.includes(val)) { activeKeys.push(val); depths[val] = 0; }
-        return { roots: [val], leaves: [val] };
-    }
-}
+    setTimeout(updatePlotlyTraces, 150);
 
-parseExpression();
-return { activeKeys, constraints, depths };
+    // Default 75% scale plus fit-to-container scaling while resizing.
+    setTimeout(() => {
+        const baseWidth = inner.offsetWidth;
+        const baseHeight = inner.offsetHeight;
+        const defaultScale = 0.75;
+        container.style.width = `${baseWidth * defaultScale}px`;
+        container.style.height = `${baseHeight * defaultScale}px`;
 
-}
-
-function isValidHierarchyOrder(proposedArray, constraints) {for (let rule of constraints) {let parentIdx = proposedArray.indexOf(rule.parent);let childIdx = proposedArray.indexOf(rule.child);if (parentIdx !== -1 && childIdx !== -1 && parentIdx > childIdx) return false;}return true;}
-
-const DEPTH_COLORS = ['#e63946', '#f4a261', '#e9c46a', '#2a9d8f', '#264653', '#1d3557'];
-
-window.init_hierarchy = function(el, x) {el.querySelectorAll('.hierarchy-addon-container').forEach(ghost => ghost.remove());
-
-if (window.getComputedStyle(el).position === 'static') {
-    el.style.position = 'relative';
-}
-
-let structureStr = x.hierarchy_structure;
-if (!structureStr) return;
-
-let { activeKeys, constraints } = parseStructure(structureStr);
-const allHierarchyKeys = [...activeKeys];
-
-let disabledKeys = new Set();
-
-const styleId = 'hierarchy-addon-master-styles';
-if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.innerHTML = `
-        .hierarchy-chip {
-            background: #ffffff; border: 1px solid #cbd5e1; border-radius: 20px;
-            padding: 6px 16px; display: flex; align-items: center; gap: 10px;
-            font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 500;
-            color: #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: grab;
-            transition: all 0.15s ease;
-        }
-        .hierarchy-chip:active { cursor: grabbing; transform: scale(0.98); }
-        .hierarchy-chip.dragging { opacity: 0.4; }
-        .hierarchy-chip.drag-over-top { border-top: 2px solid #3b82f6; }
-        .hierarchy-chip.drag-over-bottom { border-bottom: 2px solid #3b82f6; }
-        .hierarchy-chip .chip-color { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: all 0.15s ease; }
-
-        .hierarchy-chip.disabled {
-            background: #f1f5f9; border-color: #e2e8f0; border-style: dashed;
-            color: #94a3b8; box-shadow: none; cursor: pointer;
-        }
-        .hierarchy-chip.disabled .chip-color {
-            filter: grayscale(100%); opacity: 0.4;
-        }
-
-        .error-shake { animation: chip-shake 0.4s; }
-        @keyframes chip-shake {
-            0% { transform: translateX(0); } 25% { transform: translateX(-4px); }
-            50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } 100% { transform: translateX(0); }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-let container = document.createElement('div');
-container.className = 'hierarchy-addon-container';
-container.style.cssText = `
-    position: absolute; right: 20px !important; left: auto !important; top: 50%; transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-    border: 1px solid rgba(203, 213, 225, 0.8); border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    z-index: 1000; cursor: grab; padding: 0; user-select: none;
-    min-width: 60px; min-height: 60px;
-`;
-el.appendChild(container);
-
-let innerWrapper = document.createElement('div');
-innerWrapper.style.cssText = `
-    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
-    padding: 12px 16px 12px 28px; width: max-content; height: max-content;
-    transform-origin: top left; position: relative; pointer-events: none;
-`;
-container.appendChild(innerWrapper);
-
-const handleDefs = [
-    { dir: 'n', cursor: 'ns-resize', style: 'top: -5px; left: 10px; right: 10px; height: 10px;' },
-    { dir: 's', cursor: 'ns-resize', style: 'bottom: -5px; left: 10px; right: 10px; height: 10px;' },
-    { dir: 'e', cursor: 'ew-resize', style: 'right: -5px; top: 10px; bottom: 10px; width: 10px;' },
-    { dir: 'w', cursor: 'ew-resize', style: 'left: -5px; top: 10px; bottom: 10px; width: 10px;' },
-    { dir: 'nw', cursor: 'nwse-resize', style: 'top: -5px; left: -5px; width: 15px; height: 15px;' },
-    { dir: 'ne', cursor: 'nesw-resize', style: 'top: -5px; right: -5px; width: 15px; height: 15px;' },
-    { dir: 'sw', cursor: 'nesw-resize', style: 'bottom: -5px; left: -5px; width: 15px; height: 15px;' },
-    { dir: 'se', cursor: 'nwse-resize', style: 'bottom: -5px; right: -5px; width: 15px; height: 15px;' }
-];
-
-let activeResizeHandle = null;
-let startX, startY, startLeft, startTop, startW, startH, currentAspect;
-
-const startResize = (dir) => (e) => {
-    e.stopPropagation(); e.preventDefault();
-    activeResizeHandle = dir;
-    startW = container.offsetWidth; startH = container.offsetHeight;
-    currentAspect = startW / startH; startX = e.clientX; startY = e.clientY;
-    let rect = container.getBoundingClientRect(); let parentRect = el.getBoundingClientRect();
-    startLeft = rect.left - parentRect.left; startTop = rect.top - parentRect.top;
-    container.style.right = 'auto'; container.style.transform = 'none';
-    container.style.left = startLeft + 'px'; container.style.top = startTop + 'px';
-};
-
-handleDefs.forEach(def => {
-    let h = document.createElement('div');
-    h.style.cssText = `position: absolute; z-index: 1002; cursor: ${def.cursor}; ${def.style}`;
-    h.addEventListener('mousedown', startResize(def.dir));
-    container.appendChild(h);
-});
-
-let isDraggingPanel = false;
-container.addEventListener('mousedown', function(e) {
-    if (e.target.closest('.hierarchy-chip')) return;
-    isDraggingPanel = true; startX = e.clientX; startY = e.clientY;
-    let rect = container.getBoundingClientRect(); let parentRect = el.getBoundingClientRect();
-    startLeft = rect.left - parentRect.left; startTop = rect.top - parentRect.top;
-    container.style.right = 'auto'; container.style.transform = 'none';
-    container.style.left = startLeft + 'px'; container.style.top = startTop + 'px';
-    container.style.cursor = 'grabbing';
-});
-
-document.addEventListener('mousemove', function(e) {
-    if (activeResizeHandle) {
-        e.preventDefault();
-        let dx = e.clientX - startX; let dy = e.clientY - startY;
-        let newW = startW; let newH = startH; let newLeft = startLeft; let newTop = startTop; const minSize = 60;
-        if (['e', 'se', 'ne'].includes(activeResizeHandle)) newW = Math.max(minSize, startW + dx);
-        if (['w', 'sw', 'nw'].includes(activeResizeHandle)) { newW = Math.max(minSize, startW - dx); newLeft = startLeft + (startW - newW); }
-        if (['se', 'sw', 'ne', 'nw'].includes(activeResizeHandle)) { newH = newW / currentAspect; if (['ne', 'nw'].includes(activeResizeHandle)) newTop = startTop + (startH - newH); }
-        else { if (activeResizeHandle === 's') newH = Math.max(minSize, startH + dy); if (activeResizeHandle === 'n') { newH = Math.max(minSize, startH - dy); newTop = startTop + (startH - newH); } }
-        container.style.width = newW + 'px'; container.style.height = newH + 'px'; container.style.left = newLeft + 'px'; container.style.top = newTop + 'px';
-        return;
-    }
-    if (isDraggingPanel) {
-        e.preventDefault(); let dx = e.clientX - startX; let dy = e.clientY - startY;
-        container.style.left = (startLeft + dx) + 'px'; container.style.top = (startTop + dy) + 'px';
-    }
-});
-
-document.addEventListener('mouseup', function() {
-    activeResizeHandle = null; if (isDraggingPanel) { isDraggingPanel = false; container.style.cursor = 'grab'; }
-});
-
-function cloneTrace(t) {
-    let nt = Object.assign({}, t);
-    if (t.line) nt.line = Object.assign({}, t.line); else nt.line = {};
-    if (t.marker) nt.marker = Object.assign({}, t.marker); else nt.marker = {};
-    return nt;
-}
-
-function updatePlotlyTraces(displayKeys) {
-    let plotEl = el.classList.contains('js-plotly-plot') ? el : el.querySelector('.js-plotly-plot');
-    if (!plotEl || !plotEl.data) { setTimeout(() => updatePlotlyTraces(displayKeys), 150); return; }
-    let newTraces = [];
-
-    plotEl.data.forEach(trace => {
-        if (!trace.type || !trace.type.includes('scatter')) { newTraces.push(cloneTrace(trace)); return; }
-        if (trace.x && trace.x.includes(null)) {
-            let cx=[], cy=[], ct=[], ch=[]; let hasText = Array.isArray(trace.text); let hasHover = Array.isArray(trace.hovertext);
-            for (let i = 0; i < trace.x.length; i++) {
-                if (trace.x[i] == null || trace.y[i] == null) {
-                    if (cx.length > 0) {
-                        let nt = cloneTrace(trace); nt.x = cx; nt.y = cy; if(hasText) nt.text = ct; if(hasHover) nt.hovertext = ch; delete nt.uid; newTraces.push(nt); cx=[]; cy=[]; ct=[]; ch=[];
-                    }
-                } else {
-                    cx.push(trace.x[i]); cy.push(trace.y[i]); if(hasText) ct.push(trace.text[i]); if(hasHover) ch.push(trace.hovertext[i]);
-                }
-            }
-            if (cx.length > 0) { let nt = cloneTrace(trace); nt.x = cx; nt.y = cy; if(hasText) nt.text = ct; if(hasHover) nt.hovertext = ch; delete nt.uid; newTraces.push(nt); }
-        } else { newTraces.push(cloneTrace(trace)); }
-    });
-
-    newTraces.forEach((st) => {
-        if (!st.type || !st.type.includes('scatter')) return;
-        let textArr = Array.isArray(st.text) ? st.text : (Array.isArray(st.hovertext) ? st.hovertext : [st.text || st.hovertext]); let bestText = ""; let minAggCount = 999;
-        for (let i = 0; i < textArr.length; i++) {
-            let t = textArr[i]; if (typeof t !== 'string' || t.length < 5) continue;
-            let clean = t.toLowerCase().replace(/\s+/g, ''); let aggCount = (clean.match(/<aggregated>|&lt;aggregated&gt;|:na/g) || []).length;
-            if (aggCount < minAggCount) { minAggCount = aggCount; bestText = t; }
-        }
-        if (!bestText) { st.visible = false; return; }
-
-        let cleanTT = bestText.toLowerCase().replace(/\s+/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); let isAgg = {};
-        allHierarchyKeys.forEach(k => { let keyPrefix = k.toLowerCase() + ":"; isAgg[k] = !cleanTT.includes(keyPrefix) || cleanTT.includes(keyPrefix + "<aggregated>") || cleanTT.includes(keyPrefix + "na"); });
-
-        let activeDepth = 0;
-        for (let j = 0; j < displayKeys.length; j++) {
-            if (!isAgg[displayKeys[j]]) activeDepth = j + 1;
-        }
-
-        let isValid = true;
-        for (let j = 0; j < displayKeys.length; j++) {
-            if (j < activeDepth && isAgg[displayKeys[j]]) isValid = false;
-            if (j >= activeDepth && !isAgg[displayKeys[j]]) isValid = false;
-        }
-
-        allHierarchyKeys.forEach(k => {
-            if (!displayKeys.includes(k) && !isAgg[k]) {
-                isValid = false;
-            }
+        const observer = new ResizeObserver(() => {
+            const scale = Math.min(
+                container.clientWidth / baseWidth,
+                container.clientHeight / baseHeight
+            );
+            const offsetX = (container.clientWidth - baseWidth * scale) / 2;
+            const offsetY = (container.clientHeight - baseHeight * scale) / 2;
+            inner.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
         });
-
-        st.visible = isValid;
-        if (isValid) {
-            st.opacity = (activeDepth === displayKeys.length) ? 0.6 : 1;
-            st.line.width = (activeDepth === 0) ? 4 : (activeDepth === displayKeys.length ? 1 : 2.5);
-            st.line.color = DEPTH_COLORS[activeDepth % DEPTH_COLORS.length];
-            st.marker.color = DEPTH_COLORS[activeDepth % DEPTH_COLORS.length];
-        } else {
-            st.opacity = 0; st.line.width = 0; st.line.color = 'transparent'; st.marker.color = 'transparent';
-        }
-    });
-    Plotly.react(plotEl, newTraces, plotEl.layout);
-}
-
-function drawLines() {
-    const oldSvgs = innerWrapper.querySelectorAll('svg');
-    oldSvgs.forEach(s => s.remove());
-
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-
-    svg.setAttribute('class', 'hierarchy-svg-lines');
-    svg.style.position = 'absolute'; svg.style.top = '0px'; svg.style.left = '0px';
-    svg.style.width = '100%'; svg.style.height = '100%'; svg.style.pointerEvents = 'none'; svg.style.zIndex = '1'; svg.style.overflow = 'visible';
-
-    const chips = Array.from(innerWrapper.querySelectorAll('.hierarchy-chip'));
-
-    constraints.forEach(rule => {
-        const parentEl = chips.find(c => c.dataset.key === rule.parent);
-        const childEl = chips.find(c => c.dataset.key === rule.child);
-        if (parentEl && childEl) {
-            const y1 = parentEl.offsetTop + (parentEl.offsetHeight / 2); const y2 = childEl.offsetTop + (childEl.offsetHeight / 2);
-            const startX = parentEl.offsetLeft; const endX = childEl.offsetLeft; const trackX = Math.min(startX, endX) - 16; const r = 6; let d = "";
-            if (y1 < y2) d = `M ${startX} ${y1} L ${trackX + r} ${y1} Q ${trackX} ${y1} ${trackX} ${y1 + r} L ${trackX} ${y2 - r} Q ${trackX} ${y2} ${trackX + r} ${y2} L ${endX} ${y2}`;
-            else if (y1 > y2) d = `M ${startX} ${y1} L ${trackX + r} ${y1} Q ${trackX} ${y1} ${trackX} ${y1 - r} L ${trackX} ${y2 + r} Q ${trackX} ${y2} ${trackX + r} ${y2} L ${endX} ${y2}`;
-
-            const lineColor = disabledKeys.has(rule.child) ? '#e2e8f0' : '#a0aec0';
-
-            if (d) {
-                const path = document.createElementNS(svgNS, 'path');
-                path.setAttribute('d', d); path.setAttribute('fill', 'none');
-                path.setAttribute('stroke', lineColor); path.setAttribute('stroke-width', '2');
-                svg.appendChild(path);
-            }
-        }
-    });
-    innerWrapper.appendChild(svg);
-}
-
-function renderTree() {
-    innerWrapper.querySelectorAll('.hierarchy-chip').forEach(c => c.remove());
-    innerWrapper.querySelectorAll('svg').forEach(s => s.remove());
-
-    let displayKeys = activeKeys.filter(k => !disabledKeys.has(k));
-
-    activeKeys.forEach((key, index) => {
-        const chip = document.createElement('div'); chip.className = 'hierarchy-chip'; chip.draggable = true; chip.dataset.key = key; chip.style.pointerEvents = 'auto';
-
-        if (disabledKeys.has(key)) chip.classList.add('disabled');
-
-        let displayIdx = displayKeys.indexOf(key);
-        let color = displayIdx !== -1 ? DEPTH_COLORS[(displayIdx + 1) % DEPTH_COLORS.length] : '#94a3b8';
-
-        chip.innerHTML = `<span class="chip-color" style="background:${color}"></span>${key}`;
-
-        let wasDragged = false;
-        chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', key); e.target.classList.add('dragging'); });
-
-        chip.addEventListener('dragend', e => {
-            e.target.classList.remove('dragging'); document.querySelectorAll('.hierarchy-chip').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
-            wasDragged = true; setTimeout(() => wasDragged = false, 150);
-        });
-
-        chip.addEventListener('dragover', e => { e.preventDefault(); const bounding = chip.getBoundingClientRect(); const offset = e.clientY - bounding.top; document.querySelectorAll('.hierarchy-chip').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom')); if (offset > bounding.height / 2) chip.classList.add('drag-over-bottom'); else chip.classList.add('drag-over-top'); });
-
-        chip.addEventListener('drop', e => {
-            e.preventDefault(); document.querySelectorAll('.hierarchy-chip').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
-            const draggedKey = e.dataTransfer.getData('text/plain'); if (draggedKey === key) return;
-            let currentKeys = Array.from(innerWrapper.querySelectorAll('.hierarchy-chip')).map(c => c.dataset.key); let draggedIdx = currentKeys.indexOf(draggedKey); currentKeys.splice(draggedIdx, 1);
-            let targetIdx = currentKeys.indexOf(key); const bounding = chip.getBoundingClientRect(); if (e.clientY - bounding.top > bounding.height / 2) currentKeys.splice(targetIdx + 1, 0, draggedKey); else currentKeys.splice(targetIdx, 0, draggedKey);
-
-            if (isValidHierarchyOrder(currentKeys, constraints)) {
-                activeKeys = currentKeys;
-                renderTree();
-                updatePlotlyTraces(activeKeys.filter(k => !disabledKeys.has(k)));
-            } else {
-                const draggedEl = document.querySelector('.dragging') || chip;
-                draggedEl.classList.add('error-shake');
-                setTimeout(() => draggedEl.classList.remove('error-shake'), 400);
-            }
-        });
-
-        chip.addEventListener('click', (e) => {
-            if (wasDragged) return;
-
-            if (!disabledKeys.has(key)) {
-                if ((activeKeys.length - disabledKeys.size) <= 1) {
-                    chip.classList.add('error-shake');
-                    setTimeout(() => chip.classList.remove('error-shake'), 400);
-                    return; // Stop here, do not disable.
-                }
-                disabledKeys.add(key);
-            } else {
-                disabledKeys.delete(key);
-            }
-
-            renderTree();
-            updatePlotlyTraces(activeKeys.filter(k => !disabledKeys.has(k)));
-        });
-
-        innerWrapper.appendChild(chip);
-    });
-
-    setTimeout(() => drawLines(), 30);
-}
-
-renderTree();
-setTimeout(() => { updatePlotlyTraces(activeKeys.filter(k => !disabledKeys.has(k))); }, 150);
-
-let baseWidth = 0; let baseHeight = 0;
-setTimeout(() => {
-    baseWidth = innerWrapper.offsetWidth; baseHeight = innerWrapper.offsetHeight;
-    const defaultScale = 0.75; container.style.width = (baseWidth * defaultScale) + 'px'; container.style.height = (baseHeight * defaultScale) + 'px';
-    const resizeObserver = new ResizeObserver(() => {
-        if (baseWidth === 0) return;
-        let scaleX = container.clientWidth / baseWidth; let scaleY = container.clientHeight / baseHeight; let scale = Math.min(scaleX, scaleY);
-        let scaledWidth = baseWidth * scale; let scaledHeight = baseHeight * scale; let offsetX = (container.clientWidth - scaledWidth) / 2; let offsetY = (container.clientHeight - scaledHeight) / 2;
-        innerWrapper.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-    });
-    resizeObserver.observe(container);
-}, 50);
+        observer.observe(container);
+        signal.addEventListener("abort", () => observer.disconnect(), { once: true });
+    }, 50);
 };

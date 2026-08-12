@@ -1,0 +1,53 @@
+---
+title: "demo"
+format: html
+---
+
+```{r}
+library(ggelato)
+library(tidyverse)
+library(fpp3)
+```
+
+```{r}
+agg_tourism <- tourism |>
+  aggregate_key((State/Region)*Purpose, Trips = sum(Trips)) |>
+  mutate(across(c(State, Region, Purpose), as.character))
+gig_sunburst(agg_tourism,"(State/Region)*Purpose")
+```
+
+```{r}
+stl_u <- tourism |>
+  aggregate_key((State / Region)*Purpose, Trips = sum(Trips)) |>
+  model(STL(Trips ~ season(window = "periodic"))) |>
+  components() |>
+  as.data.frame() |>
+  select(State, Region, Purpose, Quarter, Trips, trend, season_year, remainder) |>
+  mutate(
+    State = as.character(State),
+    Region = as.character(Region),
+    Purpose = as.character(Purpose),
+    Quarter = as.character(Quarter)
+  )
+
+stl_s <- tourism |>
+  aggregate_key((State / Region)*Purpose, Trips = sum(Trips)) |>
+  group_by_key() |>
+  mutate(Trips = (Trips - mean(Trips)) / sd(Trips)) |>
+  model(STL(Trips ~ season(window = "periodic"))) |>
+  components() |>
+  as.data.frame() |>
+  select(State, Region, Purpose, Quarter, Trips, trend, season_year, remainder) |>
+  mutate(
+    State = as.character(State),
+    Region = as.character(Region),
+    Purpose = as.character(Purpose),
+    Quarter = as.character(Quarter)
+  )
+
+gig_stldp(data = stl_u,
+          scaled = stl_s,
+          structure = "(State/Region)*Purpose",
+          time = "Quarter", value = "Trips")
+```
+
