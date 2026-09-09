@@ -32,13 +32,29 @@ library(feasts)
 library(tsibble)
 library(dplyr)
 
-tourism_hts <- tsibble::tourism |>
-  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+tourism_hts <- tourism |>
+  aggregate_key((State / Region) * Purpose, 
+  Trips = sum(Trips))
 
-stl_unscaled <- tourism_hts |>
+### Time series features plot
+
+tourism_ft <- tourism_hts |>
+  features(Trips, feature_set(pkgs = "feasts"))
+
+tourism_feasts <- gig(tourism_ft,
+    gig_aes(x = trend_strength, 
+            y = seasonal_strength_year),
+    structure = (State/Region)*Purpose) +
+  geom_features()
+
+tourism_feasts
+  
+### STL decomposition plot
+
+stl_original <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components() |>
-  as_tibble()
+  as_data_frame()
 
 stl_scaled <- tourism_hts |>
   group_by_key() |>
@@ -48,8 +64,32 @@ stl_scaled <- tourism_hts |>
   components() |>
   as_tibble()
 
-gig(stl_cmp, gig_aes(x = Quarter, 
-                     y = Trips)) +
-  geom_stl(scaled = stl_scaled) +
-  hierarchy((State / Region) * Purpose)
+tourism_stl <- gig(
+  stl_original,
+  gig_aes(
+    x = Quarter,
+    y = Trips,
+    seasonality = season_year,
+    trend = trend,
+    remainder = remainder
+  ),
+  structure = (State / Region) * Purpose
+) +
+  geom_stl(scaled = stl_scaled)
+
+tourism_stl
+
+### Sunburst
+tourism_sunburst <- gig(as_tibble(tourism_hts), 
+    structure = (State/Region)*Purpose) +
+  geom_sunburst(labels = TRUE) 
+
+tourism_sunburst
+
+### Coordinating multiple plots with `fridge()` in `fridge` `R` package
+
+fridge(tourism_stl,
+       tourism_feasts, 
+       tourism_sunburst, 
+       fullscreen = FALSE) 
 ```
