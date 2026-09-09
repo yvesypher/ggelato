@@ -1,1 +1,55 @@
-## ggelato
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# ggelato
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+ggelato, which stands for “Grammar of graphics for exploring and
+layering aggregated time-series objects”, is an R package for
+interactively visualising hierarchical time series. User can interact
+directly with all elements on the plot or with the assistance of the
+toolbar and hierarchy widget.
+
+## Installation
+
+You can install the development version of ggelato from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("yvesypher/ggelato")
+```
+
+## Example
+
+``` r
+library(ggelato)
+library(fabletools)
+library(feasts)
+library(tsibble)
+library(dplyr)
+
+tourism_hts <- tsibble::tourism |>
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+
+stl_unscaled <- tourism_hts |>
+  model(stl = STL(Trips)) |>
+  components() |>
+  as_tibble()
+
+stl_scaled <- tourism_hts |>
+  group_by_key() |>
+  mutate(Trips = as.numeric(scale(Trips))) |>
+  ungroup() |>
+  model(stl = STL(Trips)) |>
+  components() |>
+  as_tibble()
+
+gig(stl_cmp, gig_aes(x = Quarter, 
+                     y = Trips)) +
+  geom_stl(scaled = stl_scaled) +
+  hierarchy((State / Region) * Purpose)
+```

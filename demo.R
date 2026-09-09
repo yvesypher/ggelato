@@ -215,6 +215,10 @@ gig_stldp(data = stl_u,
           structure = "(State/Region)*Purpose",
           time = "Quarter", value = "Trips")
 
+gig(stl_u, gig_aes(x = Quarter, y = Trips)) +
+  geom_gig_stl(scaled = stl_s) +
+  hierarchy((State / Region) * Purpose)
+
 ##### sunburst ####
 
 tourism_hts <- tourism |>
@@ -227,6 +231,11 @@ gig_sunburst(tourism_hts,
              structure = "(State/Region)*Purpose",
              labels    = TRUE)
 
+
+gig(tourism_hts) +
+  geom_gig_sunburst(labels = TRUE) +
+  hierarchy((State / Region) * Purpose)
+
 tourism_ft <- tourism |>
   aggregate_key((State / Region)*Purpose,
                 Trips = sum(Trips)) |>
@@ -235,5 +244,14 @@ tourism_ft <- tourism |>
                 as.character)) |>
   as.data.frame()
 
+gig(tourism_ft) +
+  geom_gig_point() +
+  hierarchy((State / Region) * Purpose)
+
 gig_point(data = tourism_ft,
           structure = "(State/Region)*Purpose")
+
+
+tourism |>
+  aggregate_key((State / Region) * Purpose,
+                Trips = sum(Trips))  |> filter(is_aggregated(State), !is_aggregated(Purpose))

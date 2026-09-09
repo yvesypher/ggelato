@@ -1,44 +1,90 @@
-/*
- * Public browser API consumed by composition packages such as fridge.
- *
- * ggelato remains the single owner of hierarchy parsing, state, selection,
- * hierarchy widget rendering, and native plot renderers shared with a
- * composition platform. Consumers load the generated
- * inst/htmlwidgets/lib/ggelato-api/ggelato-api.js dependency instead of
- * copying these modules into their own bundles.
- */
+/* Shared browser API for ggelato */
 
 import {
   TOTAL_KEY,
-  createDepthColors,
+  TOTAL_COLOR,
+  LEVEL_COLOR_STOPS,
   dataFrameToRows,
-  parseStructure
-} from "../modules/core/hierarchy-model.js";
-import {
-  HIERARCHY_WIDGET_BUILD,
-  createHierarchyWidget
-} from "../modules/core/hierarchy-widget.js";
-import {
-  createGigHierarchyAdapter
-} from "../modules/gig/gig-selection.js";
-import {
-  createHierState
-} from "../modules/gig/gig-state.js";
-import {
-  renderSunburst
-} from "../modules/gig/gig-sunburst-renderer.js";
-
-const API_BUILD = "2026-07-28.5";
-
-window.ggelatoAPI = Object.freeze({
-  API_BUILD,
-  HIERARCHY_WIDGET_BUILD,
-  TOTAL_KEY,
+  isAggregatedValue,
   createDepthColors,
-  createGigHierarchyAdapter,
-  createHierState,
-  createHierarchyWidget,
-  dataFrameToRows,
   parseStructure,
-  renderSunburst
-});
+  isValidHierarchyOrder,
+  requiredAncestors,
+  escapeHtml
+} from '../modules/core/hierarchy-model.js';
+
+import {
+  createHierarchyWidget,
+  hierarchyConnectorPath,
+  HIERARCHY_WIDGET_BUILD
+} from '../modules/core/hierarchy-widget.js';
+
+import {
+  createHierState,
+  resolveGigStructure,
+  resolveGigValue,
+  resolveTimeColumn,
+  compareTimeRows,
+  timeSortValue
+} from '../modules/gig/gig-state.js';
+
+import {
+  getDescendantIndices,
+  updateGigSelection,
+  applyBrushSelection,
+  createGigHierarchyAdapter,
+  attachBrushGesture,
+  createBrushOverlay,
+  pointInBox,
+  pointInPolygon
+} from '../modules/gig/gig-selection.js';
+
+import { renderSunburst } from '../modules/gig/gig-sunburst-renderer.js';
+import { renderPoint } from '../modules/gig/gig-point-renderer.js';
+import { renderStldp } from '../modules/gig/gig-stldp-renderer.js';
+
+const GGELATO_API_BUILD = '2026-08-27-shared-renderers-v1';
+
+window.ggelatoAPI = {
+  build: GGELATO_API_BUILD,
+
+  // hierarchy model
+  TOTAL_KEY,
+  TOTAL_COLOR,
+  LEVEL_COLOR_STOPS,
+  dataFrameToRows,
+  isAggregatedValue,
+  createDepthColors,
+  parseStructure,
+  isValidHierarchyOrder,
+  requiredAncestors,
+  escapeHtml,
+
+  // hierarchy widget
+  createHierarchyWidget,
+  hierarchyConnectorPath,
+  HIERARCHY_WIDGET_BUILD,
+
+  // gig state
+  createHierState,
+  resolveGigStructure,
+  resolveGigValue,
+  resolveTimeColumn,
+  compareTimeRows,
+  timeSortValue,
+
+  // gig selection
+  getDescendantIndices,
+  updateGigSelection,
+  applyBrushSelection,
+  createGigHierarchyAdapter,
+  attachBrushGesture,
+  createBrushOverlay,
+  pointInBox,
+  pointInPolygon,
+
+  // renderers
+  renderSunburst,
+  renderPoint,
+  renderStldp
+};

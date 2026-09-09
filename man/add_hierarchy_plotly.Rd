@@ -9,9 +9,7 @@ add_hierarchy_plotly(plot, structure, width = NULL, height = NULL)
 \arguments{
 \item{plot}{A plotly object to which the hierarchy will be added.}
 
-\item{structure}{A string defining the hierarchy structure
-(e.g., `"(State/Region)*Purpose"`), where `/` denotes parent/child
-and `*` denotes crossed groupings.}
+\item{structure}{Hierarchy structure, e.g. "(State/Region)*Purpose".}
 
 \item{width, height}{Output size (any valid CSS unit). When omitted, the
 original Plotly dimensions and sizing policy are preserved. In QMD/RMD,
@@ -19,10 +17,10 @@ the original widget follows the document's global or per-chunk figure
 options.}
 }
 \value{
-The plotly object with the hierarchy add-on attached.
+The plotly object with the hierarchy widget.
 }
 \description{
-Overlays a draggable, resizable hierarchy tree on an existing plotly
+Add a draggable, resizable hierarchy tree on an existing plotly
 widget for hierarchical time series. Levels can be reordered by dragging
 and toggled by clicking, and traces are restyled accordingly.
 }

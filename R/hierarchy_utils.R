@@ -11,16 +11,15 @@ ggelato_hierarchy_asset_version <- function() {
   paste0(package_version, ".18")
 }
 
-#' Plot-like sizing policy shared by the native gig_* widgets
+#' Plot sizing policy shared by the native gig_* widgets
 #' @noRd
 ggelato_sizing_policy <- function() {
-  # The htmlwidgets defaults intentionally mirror ordinary R plots:
-  # the Viewer fills its pane and knitr/Quarto supplies figure dimensions.
-  # Only padding is removed so the toolbar and chart can use the whole frame.
   htmlwidgets::sizingPolicy(
     padding = 0,
     viewer.padding = 0,
+    viewer.fill = TRUE,
     browser.padding = 0,
+    browser.fill = TRUE,
     knitr.figure = TRUE
   )
 }
@@ -98,7 +97,7 @@ hierarchy_parse_interaction_name <- function(series_name, keys) {
   }
   if (all(vapply(keyed, Negate(is.null), logical(1)))) return(keyed)
 
-  separators <- c(".", "/", "|", " > ", " -> ", " › ", " → ", " » ")
+  separators <- c(".", "/", "|", " > ", " -> ", " \u203a ", " \u2192 ", " \u00bb ")
   for (separator in separators) {
     pieces <- trimws(strsplit(series_name, separator, fixed = TRUE)[[1]])
     pieces <- pieces[nzchar(pieces)]

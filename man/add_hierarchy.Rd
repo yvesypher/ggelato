@@ -9,15 +9,11 @@ add_hierarchy(plot, structure)
 \arguments{
 \item{plot}{A plotly object to which the hierarchy will be added.}
 
-\item{structure}{A string defining the hierarchy structure
-(e.g., `"(State/Region)*Purpose"`), where `/` denotes parent/child
-and `*` denotes crossed groupings.}
+\item{structure}{A string defining the hierarchy structure}
 }
 \value{
 The plotly object with the hierarchy add-on attached.
 }
 \description{
-Overlays a draggable, resizable hierarchy tree on an existing plotly
-widget for hierarchical time series. Levels can be reordered by dragging
-and toggled by clicking, and traces are restyled accordingly.
+Add an Interactive Hierarchy Panel to a Plotly Plot
 }

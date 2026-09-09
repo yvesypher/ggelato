@@ -1,0 +1,103 @@
+---
+title: "Interactive graphics for hierarchical time series"
+vignette: >
+  %\VignetteIndexEntry{A grammar for hierarchical time series graphics}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r libraries}
+# devtools::install("../fridge") #run this in console
+library(fridge)
+library(ggelato)
+library(fabletools)
+library(feasts)
+library(tsibble)
+library(dplyr)
+```
+
+## Data
+
+Australian Domestic Tourism data in `tsibble` package is used in this example. First, we need to aggregate the data by its hierarchical structure `(State/Region)*Purpose` using `fabletools::aggregate_key()`. This means that `Region` is nested within `State` and `Purpose` has crossed relationships with both of `State` and `Region`.
+
+```{r data}
+tourism_hts <- tourism |>
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+```
+
+## Time series features plot
+
+```{r hts features}
+tourism_ft <- tourism_hts |>
+  features(Trips, feature_set(pkgs = "feasts"))
+
+tourism_feasts <- gig(tourism_ft,
+    gig_aes(x = trend_strength, 
+            y = seasonal_strength_year),
+    structure = (State/Region)*Purpose) +
+  geom_features()
+
+tourism_feasts
+```
+
+## STL decomposition plot
+
+```{r reuse-2}
+stl_original <- tourism_hts |>
+  model(stl = STL(Trips)) |>
+  components() |>
+  as_data_frame()
+
+stl_scaled <- tourism_hts |>
+  group_by_key() |>
+  mutate(Trips = as.numeric(scale(Trips))) |>
+  ungroup() |>
+  model(stl = STL(Trips)) |>
+  components() |>
+  as_tibble()
+
+tourism_stl <- gig(
+  stl_original,
+  gig_aes(
+    x = Quarter,
+    y = Trips,
+    seasonality = season_year,
+    trend = trend,
+    remainder = remainder
+  ),
+  structure = (State / Region) * Purpose
+) +
+  geom_stl(scaled = stl_scaled)
+
+tourism_stl
+```
+
+## Sunburst
+
+```{r sunburst}
+tourism_sunburst <- gig(as_tibble(tourism_hts), 
+    structure = (State/Region)*Purpose) +
+  geom_sunburst(labels = TRUE) 
+
+tourism_sunburst
+```
+
+## Coordinating multiple plots with `fridge()` in `fridge` `R` package
+
+:::{.column-screen}
+```{r}
+fridge(tourism_stl,
+       tourism_feasts, 
+       tourism_sunburst, 
+       fullscreen = FALSE) 
+```
+
+:::
+

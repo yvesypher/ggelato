@@ -1,19 +1,34 @@
 Package: ggelato
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Grammar of Graphics for Exploring and Layering Aggregated Time Series
+Description: Interactive graphics for hierarchical and grouped time.
 Version: 0.1.0.9000
 Authors@R: c(
-    person(
-      "Jane", "Doe",
-      email = "jane@example.com",
-      role = c("aut", "cre")
-    )
+    person("Minh", "Nguyen", email = "minh.nguyen11@monash.edu", role = c("aut", "cre"), comment = c(ORCID = "0009-0003-4630-8414")),
+    person("Di", "Cook", email = "dicook@monash.edu", role = c("aut", "ctb"), comment = c(ORCID = "0000-0002-3813-7155")),
+    person("Tim", "Dwyer", email = "tim.dwyer@monash.edu", role = c("aut", "ctb"), comment = c(ORCID = "0000-0002-9076-9571"))
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Suggests:
+    fridge,
+    tsibble,
+    feasts,
+    knitr,
+    fable,
+    quarto
 Imports: 
-    htmlwidgets
-RoxygenNote: 7.3.2
+    htmlwidgets,
+    rlang,
+    grDevices,
+    stats,
+    htmltools,
+    dplyr,
+    fabletools,
+    highcharter,
+    plotly
+Depends: R (>= 2.10)
+Roxygen: list(markdown = TRUE)
+VignetteBuilder: quarto
+Config/roxygen2/version: 8.1.0

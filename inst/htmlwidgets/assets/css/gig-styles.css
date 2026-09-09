@@ -1,9 +1,4 @@
-/* ---------------------------------------------------------------
-   Plot- and toolbar-specific styles for gig_point, gig_stldp, and
-   gig_sunburst. Hierarchy widget styles live in hierarchy-core.css.
-   --------------------------------------------------------------- */
-
-/* ===== Shared gig_* frame and tooltip ===== */
+/* Frame and tooltips */
 .gig-widget { display: flex; width: 100%; height: 100%; position: relative;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: #fff; overflow: hidden; }
@@ -13,10 +8,7 @@
   transition: opacity .1s; transform: translate(10px, -50%); }
 .gig-tooltip-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
 
-/* ===== toolbar (gig_stldp / gig_sunburst) =====
-   linkvis-style: docked left (default) / docked top / floating vertical /
-   floating horizontal / minimized. Mode switches are instant - no fade
-   transitions - so relayout + chart resize stays fast. */
+/* Toolbar */
 .gig-toolbar { position: absolute; z-index: 40; display: flex; align-items: center;
   gap: 8px; box-sizing: border-box;
   background: rgba(255,255,255,0.96); border: 1px solid rgba(0,0,0,0.05);
@@ -38,7 +30,6 @@
 .gig-toolbar.gig-tb-minimized > *:not(.gig-tb-handle-wrap) { display: none !important; }
 .gig-toolbar.gig-tb-minimized .gig-tb-handle { pointer-events: none; }
 
-/* separator + scaled/original switch (ported from linkvis) */
 .gig-separator { background: #cbd5e1; border-radius: 2px; flex-shrink: 0; }
 .gig-tb-docked-left .gig-separator, .gig-tb-float-v .gig-separator {
   width: 20px; height: 2px; margin: 6px auto; }
@@ -61,13 +52,12 @@
 .gig-data-switch input:checked + .gig-slider .gig-knob { transform: translateX(64px); }
 .gig-data-switch input:checked + .gig-slider .gig-label-original { opacity: 0; }
 .gig-data-switch input:checked + .gig-slider .gig-label-scaled { opacity: 1; }
-/* rotate in vertical toolbars, exactly like linkvis */
 .gig-tb-docked-left .gig-data-switch, .gig-tb-float-v .gig-data-switch {
   transform: rotate(90deg); margin: 34px 0; }
 .gig-tb-docked-top .gig-data-switch, .gig-tb-float-h .gig-data-switch {
   transform: none; margin: 0 12px; }
 
-/* drag handle + its mode menu */
+/* Toolbars */
 .gig-tb-handle-wrap { position: relative; display: flex; align-items: center;
   justify-content: center; }
 .gig-tb-handle { cursor: grab; display: flex; align-items: center;
@@ -85,7 +75,7 @@
 .gig-tb-menu .gig-tb-menu-sep { height: 1px; background: #eee; margin: 4px 0; }
 .gig-tb-menu .gig-tb-menu-primary { font-weight: 700; color: #0072B2; }
 
-/* vertical toolbars open flyouts to the right; horizontal ones open below */
+/* Toolbar */
 .gig-tb-docked-left .gig-tb-menu, .gig-tb-float-v .gig-tb-menu,
 .gig-tb-docked-left .gig-tool-menu, .gig-tb-float-v .gig-tool-menu {
   top: 0; left: 100%; margin-left: 6px; }
@@ -113,7 +103,7 @@
 .gig-tool-menu a.active-mode { background: #e6f3fa; color: #0072B2; font-weight: 700; }
 .gig-tool-menu a.active-mode::after { content: '\2713'; font-weight: bold; }
 
-/* "Inverse Selection" parent row with a hover submenu for its two variants */
+/* Inverse Selection */
 .gig-tool-menu .gig-has-sub { position: relative; display: flex; align-items: center;
   justify-content: space-between; padding: 10px 14px; font-size: 13px; color: #333;
   cursor: default; border-bottom: 1px solid #f0f0f0; }
@@ -126,7 +116,7 @@
   z-index: 220; }
 .gig-has-sub:hover .gig-tool-submenu { display: block; }
 
-/* ===== gig_stldp ===== */
+/* gig_stldp */
 .gig-stldp-main { flex: 1; display: flex; flex-direction: column; min-width: 0;
   padding: 8px 10px; position: relative; }
 .gig-stl-controls { display: flex; gap: 6px; margin-bottom: 6px; flex: none; }
@@ -139,7 +129,7 @@
 .gig-stl-crosshair { position: absolute; border-left: 1.5px dashed rgba(0,114,178,0.6);
   pointer-events: none; z-index: 50; display: none; }
 
-/* ===== gig_sunburst (look ported from hierarchy.css) ===== */
+/* gig_sunburst */
 .gig-sunburst-main { flex: 1; position: relative; min-width: 0;
   box-sizing: border-box; overflow: hidden; }
 .gig-sunburst-main svg { width: 100%; height: 100%; display: block;
@@ -165,7 +155,7 @@
 .gig-sunburst-tooltip-path { margin-top: 2px; color: #64748b; font-size: 11px; }
 
 
-/* ===== gig_point (time series feature scatterplot, from linkvis) ===== */
+/* gig_point */
 .gig-point-main { flex: 1; position: relative; min-width: 0;
   box-sizing: border-box; overflow: hidden; display: flex;
   align-items: center; justify-content: center; }

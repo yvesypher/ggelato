@@ -1,21 +1,6 @@
-# Internal helpers shared by gig_point(), gig_stldp(), and gig_sunburst().
+# Internal helpers shared by the gig() grammar object model (gig.R,
+# gig_aes.R, hierarchy.R) and the geom_*() constructors.
 
-# Resolve a renamed public argument while keeping one release of source-level
-# compatibility for callers using the former name.
-resolve_gig_alias <- function(primary, legacy, primary_name, legacy_name) {
-  if (!is.null(primary) && !is.null(legacy)) {
-    stop(
-      "Supply only `", primary_name, "` or its deprecated `", legacy_name,
-      "` alias, not both.",
-      call. = FALSE
-    )
-  }
-  if (is.null(primary)) legacy else primary
-}
-
-# Coerce a data frame so it serialises cleanly to JavaScript. Numeric columns
-# remain numeric; special vector classes (including agg_vec, factor,
-# yearquarter, and yearmonth) become character columns.
 prep_gig_data <- function(data) {
   data <- as.data.frame(data)
   for (name in names(data)) {
@@ -27,8 +12,6 @@ prep_gig_data <- function(data) {
   data
 }
 
-# Resolve the index used by gig_stldp(). An explicit name wins; otherwise use
-# a tsibble index, a recognised temporal class, or a conventional index name.
 resolve_gig_time_column <- function(data, time = NULL, x = NULL) {
   if (!is.null(time) && !is.null(x)) {
     stop("Supply only one of `time` or `x`.", call. = FALSE)
@@ -81,15 +64,12 @@ resolve_gig_time_column <- function(data, time = NULL, x = NULL) {
   if (length(match_index)) return(column_names[[match_index[[1L]]]])
 
   stop(
-    "Could not infer the time column. Supply it explicitly, for example ",
-    "`gig_stldp(data, time = \"timestamp\")`.",
+    "Could not infer the time column. Supply it explicitly with ",
+    "`gig_aes(x = timestamp)`.",
     call. = FALSE
   )
 }
 
-# Preserve chronology before special index classes are formatted for JSON.
-# Character indices are ordered in JavaScript, which can parse calendar,
-# quarter, week, date-time and naturally numbered labels.
 gig_time_order <- function(column) {
   ordered_class <- is.numeric(column) || is.factor(column) ||
     inherits(column, c(
@@ -119,16 +99,11 @@ create_gig_widget <- function(name, x, width, height, element_id) {
   htmlwidgets::createWidget(
     name = name,
     x = x,
-    # NULL delegates sizing to htmlwidgets. In knitr/Quarto this uses the same
-    # global or per-chunk figure dimensions as ordinary R plots.
     width = width,
     height = height,
     package = "ggelato",
     elementId = element_id,
     sizingPolicy = ggelato_sizing_policy(),
-    # gig-styles.css and plotting libraries remain in each widget's existing
-    # YAML binding; only the newly shared hierarchy stylesheet is attached
-    # here.
     dependencies = list(ggelato_hierarchy_core_dependency())
   )
 }
