@@ -279,11 +279,73 @@ export function createGigHierarchyAdapter({
     getDisabledKeys: () => state.disabled,
     getTotalVisible: () => !state.isHidden(TOTAL_KEY, "Total"),
     setHierarchyState: snapshot => {
+      const oldDisplayKeys = state.displayKeys();
+      const selectedValueIntents = [];
+      const coveredIndices = new Set();
+
+      oldDisplayKeys.forEach(key => {
+        state.valuesForKey(key).forEach(rawValue => {
+          const value = String(rawValue);
+          const indices = findIndices(key, value);
+          if (indices.length && indices.every(index => selectedIndices.has(index))) {
+            selectedValueIntents.push({ key, value });
+            indices.forEach(index => coveredIndices.add(index));
+          }
+        });
+      });
+
+      const pathIntents = [...selectedIndices]
+        .filter(index => !coveredIndices.has(index))
+        .map(index => {
+          const series = state.series[index];
+          if (!series) return null;
+          const criteria = {};
+          oldDisplayKeys.slice(0, series._depth).forEach(key => {
+            if (series[key] != null) criteria[key] = String(series[key]).trim();
+          });
+          return Object.keys(criteria).length ? criteria : null;
+        })
+        .filter(Boolean);
+
+      const totalWasExplicitlySelected = state.series.some((series, index) =>
+        series._depth === 0 && selectedIndices.has(index)
+      );
+
       state.activeKeys = [...snapshot.activeKeys];
       state.disabled = new Set(snapshot.disabledKeys);
       state.setHidden(TOTAL_KEY, "Total", !snapshot.totalVisible);
       state.rebuild();
+
       selectedIndices.clear();
+
+      selectedValueIntents.forEach(({ key, value }) => {
+        findIndices(key, value).forEach(index => selectedIndices.add(index));
+      });
+
+      const newDisplayKeys = state.displayKeys();
+      pathIntents.forEach(criteria => {
+        const positions = Object.keys(criteria)
+          .map(key => newDisplayKeys.indexOf(key))
+          .filter(position => position >= 0);
+        if (!positions.length) return;
+        const targetDepth = Math.max(...positions) + 1;
+        state.series.forEach((series, index) => {
+          if (series._depth !== targetDepth) return;
+          const matches = Object.entries(criteria).every(([key, value]) => {
+            const position = newDisplayKeys.indexOf(key);
+            if (position < 0 || position >= targetDepth) return true;
+            return String(series[key]).trim() === value;
+          });
+          if (matches) selectedIndices.add(index);
+        });
+      });
+
+      if (totalWasExplicitlySelected) {
+        state.series.forEach((series, index) => {
+          if (series._depth === 0) selectedIndices.add(index);
+        });
+      }
+
       onStructureChange();
     },
     onTotalClick: () => {

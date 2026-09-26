@@ -1,8 +1,5 @@
 /*
- * Shared gig_point renderer used by the standalone gig_point widget and by
- * fridge. Owns the Chart.js scatterplot, axis dropdowns, zoom/pan, and
- * box/lasso brushing. Toolbar chrome and the hierarchy widget belong to the
- * caller (gig_point.js's factory, or fridge.js's shared toolbar).
+ * Shared gig_point renderer used by the standalone gig_point widget and by fridge.
  */
 
 import {
@@ -12,6 +9,8 @@ import {
   pointInPolygon
 } from './gig-selection.js';
 import { dataFrameToRows } from '../core/hierarchy-model.js';
+
+const POINT_RADIUS = 2;
 
 export function renderPoint(content, x, shared) {
   const rows = dataFrameToRows(x.data);
@@ -23,6 +22,7 @@ export function renderPoint(content, x, shared) {
   };
 
   let pointIndexMap = [];
+  let plotted = [];   // [{ i, x, y }] for every visible point, in series order
   let hasUserZoomed = false;
   let clickMoved = false;
   let destroyed = false;
@@ -93,15 +93,22 @@ export function renderPoint(content, x, shared) {
     if (idx !== undefined) shared.select(idx, shiftKey);
   }
 
-  // responsive:false — the caller drives sizing explicitly via resize(side,
-  // side) below. Letting Chart.js auto-detect its parent's size fights with
-  // a ResizeObserver-driven host (fridge) and can create a resize feedback
-  // loop.
+  if (!Chart.Interaction.modes.gigSingleNearest) {
+    Chart.Interaction.modes.gigSingleNearest = function(chart, event, options, useFinalPosition) {
+      const hits = Chart.Interaction.modes.nearest(chart, event, options, useFinalPosition);
+      return hits.length ? [hits[0]] : [];
+    };
+  }
+
   const chart = new Chart(canv, {
     type: 'scatter',
-    data: { datasets: [{ data: [], backgroundColor: [], pointRadius: [], pointHitRadius: 6 }] },
+    data: { datasets: [{
+      data: [], backgroundColor: [],
+      pointRadius: POINT_RADIUS, pointHoverRadius: POINT_RADIUS, pointHitRadius: 5
+    }] },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'gigSingleNearest', intersect: true, axis: 'xy' },
       scales: {
         x: { type: 'linear', ticks: { font: { weight: 'bold' } },
              grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
@@ -110,7 +117,7 @@ export function renderPoint(content, x, shared) {
       },
       plugins: {
         legend: { display: false },
-        tooltip: { enabled: false, external: externalTooltipHandler, mode: 'nearest', intersect: true }
+        tooltip: { enabled: false, external: externalTooltipHandler, mode: 'gigSingleNearest', intersect: true }
       },
       onClick: (e, activeEls) =>
         handleInteraction(activeEls, e.native ? e.native.shiftKey : false, clickMoved)
@@ -206,8 +213,6 @@ export function renderPoint(content, x, shared) {
     }
   });
 
-  // Zoom/pan is local render state, not selection state, but it should
-  // still clear on a dashboard/plot reset.
   shared.resetFns.push(() => {
     hasUserZoomed = false;
     delete chart.options.scales.x.min;
@@ -216,22 +221,24 @@ export function renderPoint(content, x, shared) {
     delete chart.options.scales.y.max;
   });
 
-  function update(full) {
-    if (!full) {
-      const cols = [], rads = [];
-      pointIndexMap.forEach(i => {
-        const st = shared.getStyle(shared.state.series[i], i);
-        cols.push(st.c);
-        rads.push(st.r);
-      });
-      chart.data.datasets[0].backgroundColor = cols;
-      chart.data.datasets[0].pointRadius = rads;
-      chart.update('none');
-      return;
-    }
-
-    const pts = [], cols = [], rads = [];
+  function applyStyles() {
+    const styled = plotted.map(p => ({ p, st: shared.getStyle(shared.state.series[p.i], p.i) }));
+    styled.sort((a, b) => (Number(b.st.o) || 0) - (Number(a.st.o) || 0));
+    const pts = [], cols = [];
     pointIndexMap = [];
+    styled.forEach(({ p, st }) => {
+      pts.push({ x: p.x, y: p.y });
+      cols.push(st.c);
+      pointIndexMap.push(p.i);
+    });
+    Object.assign(chart.data.datasets[0], { data: pts, backgroundColor: cols });
+    chart.update('none');
+  }
+
+  function update(full) {
+    if (!full) { applyStyles(); return; }
+
+    plotted = [];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
     shared.state.series.forEach((d, i) => {
@@ -240,11 +247,7 @@ export function renderPoint(content, x, shared) {
       if (isNaN(px) || isNaN(py)) return;
       if (px < minX) minX = px; if (px > maxX) maxX = px;
       if (py < minY) minY = py; if (py > maxY) maxY = py;
-      const st = shared.getStyle(d, i);
-      pts.push({ x: px, y: py });
-      cols.push(st.c);
-      rads.push(st.r);
-      pointIndexMap.push(i);
+      plotted.push({ i, x: px, y: py });
     });
 
     if (!hasUserZoomed && minX !== Infinity) {
@@ -256,8 +259,7 @@ export function renderPoint(content, x, shared) {
       chart.options.scales.y.max = maxY + yPad;
     }
 
-    Object.assign(chart.data.datasets[0], { data: pts, backgroundColor: cols, pointRadius: rads });
-    chart.update('none');
+    applyStyles();
   }
 
   function resize(force) {

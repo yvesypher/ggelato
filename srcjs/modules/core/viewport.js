@@ -39,9 +39,6 @@ export function applyViewportSizing(el, options, environment = {}) {
   el.classList.toggle("ggelato-viewport-width", viewportWidth);
   el.classList.toggle("ggelato-viewport-height", viewportHeight);
 
-  // Quarto/R Markdown output wrappers commonly clip content wider than the
-  // article column. Mark only completed-document wrappers, never notebook
-  // preview wrappers.
   if (typeof el.closest === "function") {
     const output = el.closest(
       ".cell-output-display, .cell-output, .html-widget-container"

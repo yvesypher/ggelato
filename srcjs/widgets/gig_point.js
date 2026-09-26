@@ -38,16 +38,18 @@ HTMLWidgets.widget({
 
     function q(sel) { return root.querySelector(sel); }
 
+    // Selection changes colour and draw order only; point size is fixed by
+    // the renderer. o: lower = drawn on top.
     function getStyle(d, i) {
       const hasSelection = selectedIndices.size > 0;
       const isSel = selectedIndices.has(i);
       const isTop = d._depth === 0;
       if (hasSelection) {
-        if (isSel) return { c: state.depthColor(d._depth), w: 2.5, r: isTop ? 6 : 4, o: 0 };
-        return { c: '#e2e8f0', w: 1, r: 2, o: 0 };
+        if (isSel) return { c: state.depthColor(d._depth), w: 2.5, o: 0 };
+        return { c: '#e2e8f0', w: 1, o: 50 + d._depth };
       }
-      if (isTop && !totalDimmed) return { c: state.depthColor(d._depth), w: 2.5, r: 6, o: 0 };
-      return { c: '#e2e8f0', w: 1, r: 2, o: 0 };
+      if (isTop && !totalDimmed) return { c: state.depthColor(d._depth), w: 2.5, o: 0 };
+      return { c: '#e2e8f0', w: 1, o: 50 + d._depth };
     }
 
     function select(index, shift) {

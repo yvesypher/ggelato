@@ -130,7 +130,11 @@ HTMLWidgets.widget({
               node.addEventListener(type, handler, { ...(options || {}), signal: renderController.signal }),
             getStyle,
             select,
-            brush
+            brush,
+            // Tooltip focus: with a selection active, hovering snaps only to
+            // selected series instead of the dimmed background lines.
+            hasSelection: () => selectedIndices.size > 0,
+            isSelected: i => selectedIndices.has(i)
           };
 
           renderer = renderStldp(q('.gig-stldp-main'), x, shared);

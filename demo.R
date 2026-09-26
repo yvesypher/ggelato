@@ -255,3 +255,30 @@ gig_point(data = tourism_ft,
 tourism |>
   aggregate_key((State / Region) * Purpose,
                 Trips = sum(Trips))  |> filter(is_aggregated(State), !is_aggregated(Purpose))
+
+
+tourism_sunburst <- gig(as_tibble(tourism_hts),
+                        structure = (State/Region)*Purpose) +
+  geom_sunburst(labels = TRUE)
+
+tourism_sunburst
+
+tourism_stl <- gig(
+  stl_original,
+  gig_aes(
+    x = Quarter,
+    y = Trips,
+    seasonality = season_year,
+    trend = trend,
+    remainder = remainder
+  ),
+  structure = (State / Region) * Purpose
+) +
+  geom_stl(scaled = stl_scaled)
+
+tourism_stl
+
+fridge(tourism_stl,
+       tourism_feasts,
+       tourism_sunburst,
+       fullscreen = FALSE)

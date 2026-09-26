@@ -12,8 +12,6 @@ const INTERNAL_TIME_ORDER = ".ggelato_time_order";
 
 export { TOTAL_KEY };
 
-// Public payload names are structure/value. The fallbacks allow a newly
-// installed browser bundle to render widgets created by one older R session.
 export function resolveGigStructure(payload = {}) {
   return payload.structure ?? payload.hierarchy ?? null;
 }
@@ -132,8 +130,6 @@ export function createHierState(rows, structure, excludeKeys) {
   let constraints;
   if (structure) {
     const parsed = parseStructure(structure);
-    // The structure is authoritative. An aggregate row may contain null for
-    // every hierarchy column, so inspecting only the first row loses keys.
     allKeys = parsed.activeKeys.filter(key => availableKeys.has(key));
     activeKeys = parsed.activeKeys.filter(key => allKeys.includes(key));
     constraints = parsed.constraints.filter(rule =>

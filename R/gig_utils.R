@@ -93,6 +93,19 @@ prep_gig_stldp_data <- function(data, time_column) {
   data
 }
 
+#' Shared stylesheet dependency for native gig_* widgets
+#' @noRd
+ggelato_gig_styles_dependency <- function() {
+  htmltools::htmlDependency(
+    name = "gig-styles",
+    version = ggelato_package_version(),
+    package = "ggelato",
+    src = "htmlwidgets",
+    stylesheet = "assets/css/gig-styles.css",
+    all_files = FALSE
+  )
+}
+
 #' Create a gig_* htmlwidget with consistent sizing and dependencies
 #' @noRd
 create_gig_widget <- function(name, x, width, height, element_id) {
@@ -104,7 +117,10 @@ create_gig_widget <- function(name, x, width, height, element_id) {
     package = "ggelato",
     elementId = element_id,
     sizingPolicy = ggelato_sizing_policy(),
-    dependencies = list(ggelato_hierarchy_core_dependency())
+    dependencies = list(
+      ggelato_gig_styles_dependency(),
+      ggelato_hierarchy_core_dependency()
+    )
   )
 }
 

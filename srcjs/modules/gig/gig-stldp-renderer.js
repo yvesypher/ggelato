@@ -1,9 +1,5 @@
 /*
- * Shared gig_stldp renderer used by the standalone gig_stldp widget and by
- * fridge. Draws the four linked Data/Trend/Season/Remainder Chart.js panels,
- * the shared crosshair, and per-panel box/lasso brushing. Toolbar chrome,
- * the Scaled/Original switch UI, and the hierarchy widget belong to the
- * caller.
+ * Shared gig_stldp renderer used by the standalone gig_stldp widget and by fridge.
  */
 
 import {
@@ -17,7 +13,55 @@ import { dataFrameToRows } from '../core/hierarchy-model.js';
 
 const CHART_ORDER = ['Data', 'Trend', 'Season', 'Remainder'];
 const CHART_MAP = { Data: 'data', Trend: 'trend', Season: 'season', Remainder: 'remainder' };
+const CHART_LABEL = { data: 'Data', trend: 'Trend', season: 'Seasonality', remainder: 'Remainder' };
 const Y_AXIS_WIDTH = 78;
+const SERIES_LINE_WIDTH = 1;
+
+const FOCUS_MODE = 'gigFocusNearest';
+const focusFilters = new WeakMap();
+
+function ensureFocusMode() {
+  const modes = Chart.Interaction && Chart.Interaction.modes;
+  if (!modes || modes[FOCUS_MODE]) return;
+  modes[FOCUS_MODE] = function (chart, e) {
+    const pos = ('native' in e) ? { x: e.x, y: e.y } : (() => {
+      const rect = chart.canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    })();
+    const area = chart.chartArea;
+    if (!area || pos.x < area.left || pos.x > area.right ||
+        pos.y < area.top || pos.y > area.bottom) return [];
+
+    const nLabels = (chart.data.labels || []).length;
+    if (!nLabels) return [];
+    let index = Math.round(chart.scales.x.getValueForPixel(pos.x));
+    index = Math.max(0, Math.min(nLabels - 1, index));
+
+    const accepts = focusFilters.get(chart);
+    const metas = chart.getSortedVisibleDatasetMetas();
+    const nearestIn = candidates => {
+      let best = null, bestDist = Infinity;
+      candidates.forEach(meta => {
+        const el = meta.data[index];
+        if (!el || el.skip || !Number.isFinite(el.y)) return;
+        const dist = Math.abs(el.y - pos.y);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = { element: el, datasetIndex: meta.index, index };
+        }
+      });
+      return best;
+    };
+
+    let hit = null;
+    if (accepts) {
+      const focused = metas.filter(meta => accepts(meta.index));
+      if (focused.length) hit = nearestIn(focused);
+    }
+    if (!hit) hit = nearestIn(metas);
+    return hit ? [hit] : [];
+  };
+}
 
 export function renderStldp(content, x, shared) {
   const rows = dataFrameToRows(x.data);
@@ -30,17 +74,7 @@ export function renderStldp(content, x, shared) {
     k !== '.ggelato_time_order' &&
     !['trend', 'remainder', 'season_adjust'].includes(k.toLowerCase()) &&
     !k.toLowerCase().startsWith('season')) || 'value';
-  // season/trend/remainder are required, not guessed. R's build_gig_stl()
-  // already refuses to build this widget without them explicitly mapped via
-  // gig_aes(), but that guard only covers the normal R entry point - this
-  // check makes the requirement real at the renderer itself too, so a stale
-  // cached widget or a direct (non-R) call fails loudly here rather than
-  // silently guessing a column and drawing the wrong data.
-  //
-  // The payload key stays 'season' (unchanged JS/JSON contract) even though
-  // the R-facing gig_aes() argument is named `seasonality` - display name
-  // and payload key are allowed to differ, same as `x`/`y` map onto the
-  // payload's `time`/`value` keys.
+
   const requiredStlChannels = [
     { payloadKey: 'season', displayName: 'seasonality' },
     { payloadKey: 'trend', displayName: 'trend' },
@@ -78,9 +112,6 @@ export function renderStldp(content, x, shared) {
   buildStlDictionary(rows, stlDictUnscaled);
   if (hasScaled) buildStlDictionary(scaledRows, stlDictScaled);
 
-  // If the caller supplies shared.isScaled (a mutable {v: bool} ref, as
-  // fridge does so one switch drives every STL window), read it live.
-  // Otherwise fall back to the local flag flipped via setScaled().
   function currentDict() {
     const scaled = shared.isScaled ? Boolean(shared.isScaled.v) : isScaled;
     return (scaled && hasScaled) ? stlDictScaled : stlDictUnscaled;
@@ -101,6 +132,35 @@ export function renderStldp(content, x, shared) {
 
   const stlCharts = {};
   let destroyed = false;
+
+  function chartKeyOf(chart) {
+    return Object.keys(stlCharts).find(k => stlCharts[k] === chart);
+  }
+
+  function valueAt(key, datasetIndex, trueIdx, dataIndex) {
+    const chart = stlCharts[key];
+    if (!chart) return undefined;
+    let ds = chart.data.datasets[datasetIndex];
+    if (!ds || ds._trueIndex !== trueIdx) {
+      ds = chart.data.datasets.find(candidate => candidate._trueIndex === trueIdx);
+    }
+    return ds ? ds.data[dataIndex] : undefined;
+  }
+
+  function formatValue(v) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return v == null ? '–' : v;
+    return Number.isInteger(v) ? v : v.toFixed(4);
+  }
+
+  function tooltipFocus(chart) {
+    if (typeof shared.hasSelection !== 'function' ||
+        typeof shared.isSelected !== 'function') return null;
+    return datasetIndex => {
+      if (!shared.hasSelection()) return false;
+      const ds = chart.data.datasets[datasetIndex];
+      return Boolean(ds && ds._trueIndex !== undefined && shared.isSelected(ds._trueIndex));
+    };
+  }
 
   function externalTooltipHandler(context) {
     const { chart, tooltip } = context;
@@ -144,16 +204,22 @@ export function renderStldp(content, x, shared) {
           locText += ' <span style="opacity:.7;font-size:10px;">(' +
             d[dk[d._depth - 2]] + ')</span>';
         }
-        const chartName = chart.options.plugins.title.text;
-        const v = dp.parsed.y;
-        const fv = typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(4)) : v;
         const color = chart.data.datasets[dp.datasetIndex].borderColor;
+        const hoveredKey = chartKeyOf(chart);
+        const componentRows = CHART_ORDER.map(name => {
+          const key = CHART_MAP[name];
+          const v = valueAt(key, dp.datasetIndex, trueIdx, dp.dataIndex);
+          const style = key === hoveredKey ? 'font-weight:bold;' : 'opacity:.85;';
+          return '<div style="display:flex;justify-content:space-between;gap:12px;' + style + '">' +
+            '<span>' + CHART_LABEL[key] + '</span><span>' + formatValue(v) + '</span></div>';
+        }).join('');
         tooltipEl.innerHTML =
           '<div style="font-weight:bold;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:4px;display:flex;align-items:center;">' +
           '<span class="gig-tooltip-swatch" style="background-color:' + color + '"></span>' +
           locText + '</div>' +
-          '<div>' + timeVar + ': ' + dp.label + '</div>' +
-          '<div style="margin-top:3px;">' + chartName + ': ' + fv + '</div>';
+          '<div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:3px;">' +
+          '<span>' + timeVar + '</span><span>' + dp.label + '</span></div>' +
+          componentRows;
       }
     }
     const position = chart.canvas.getBoundingClientRect();
@@ -170,12 +236,13 @@ export function renderStldp(content, x, shared) {
   }
 
   function initCharts() {
+    ensureFocusMode();
     const common = {
       responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
       elements: { point: { radius: 0, hitRadius: 5 }, line: { borderWidth: 1, tension: 0 } },
       plugins: {
         legend: { display: false },
-        tooltip: { enabled: false, external: externalTooltipHandler, mode: 'nearest', intersect: false }
+        tooltip: { enabled: false, external: externalTooltipHandler, mode: FOCUS_MODE, intersect: false }
       },
       interaction: { mode: 'nearest', axis: 'xy', intersect: false },
       onClick: (e, activeEls, chart) =>
@@ -216,6 +283,10 @@ export function renderStldp(content, x, shared) {
       trend: create('Trend', 'Trend', 'Trend'),
       season: create('Season', 'Seasonality', 'Seasonality'),
       remainder: create('Remainder', 'Remainder', 'Remainder')
+    });
+    Object.values(stlCharts).forEach(chart => {
+      const accepts = tooltipFocus(chart);
+      if (accepts) focusFilters.set(chart, accepts);
     });
     updateStlAxes();
   }
@@ -283,7 +354,6 @@ export function renderStldp(content, x, shared) {
     attachBrushingToCanvas(canv, () => stlCharts[CHART_MAP[name]]);
   });
 
-  // ---- crispness on browser zoom (devicePixelRatio changes) ----
   let lastDpr = window.devicePixelRatio;
   let dprTimer = null;
   shared.listen(window, 'resize', () => {
@@ -312,7 +382,7 @@ export function renderStldp(content, x, shared) {
 
         const st = shared.getStyle(d, i);
         const mk = arr => ({
-          data: arr, borderColor: st.c, backgroundColor: st.c, borderWidth: st.w,
+          data: arr, borderColor: st.c, backgroundColor: st.c, borderWidth: SERIES_LINE_WIDTH,
           order: st.o, pointRadius: 0, pointHitRadius: 5, tension: 0, fill: false,
           _trueIndex: i
         });
@@ -334,7 +404,7 @@ export function renderStldp(content, x, shared) {
           const st = shared.getStyle(shared.state.series[dsi._trueIndex], dsi._trueIndex);
           dsi.borderColor = st.c;
           dsi.backgroundColor = st.c;
-          dsi.borderWidth = st.w;
+          dsi.borderWidth = SERIES_LINE_WIDTH;
           dsi.order = st.o;
         });
         chart.update('none');
@@ -352,8 +422,6 @@ export function renderStldp(content, x, shared) {
     Object.values(stlCharts).forEach(c => c.destroy());
   }
 
-  // For standalone use, where the toolbar (not `shared.isScaled`) owns the
-  // switch. fridge instead sets shared.isScaled.v and calls update(true).
   function setScaled(value) {
     isScaled = Boolean(value) && hasScaled;
     update(true);

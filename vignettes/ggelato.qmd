@@ -4,6 +4,9 @@ vignette: >
   %\VignetteIndexEntry{A grammar for hierarchical time series graphics}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
+execute:
+  cache: false
+  freeze: false
 ---
 
 ```{r setup, include = FALSE}

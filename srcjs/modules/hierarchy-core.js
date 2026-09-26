@@ -5,9 +5,6 @@
  *   - required-ancestor computation for hidden nested levels
  *   - depth color scale
  *   - the draggable, resizable chip panel (reorder, toggle, connector lines)
- *
- * Chart-specific behavior (trace/series styling and reserved plot space)
- * lives in the adapter entry files and is wired in through callbacks.
  */
 
 const TOTAL_COLOR = "#e63946";
@@ -116,10 +113,6 @@ export function isValidHierarchyOrder(keys, constraints) {
     });
 }
 
-/* Hidden keys that are ancestors (via "/" constraints) of the currently
-   concrete displayed prefix must be CONCRETE, not aggregated; all other
-   hidden keys must be aggregated. Adapters call this separately for each
-   candidate series because its concrete prefix depends on its depth. */
 export function requiredAncestors(keys, constraints) {
     const required = new Set();
     const pending = [...keys];
@@ -146,9 +139,6 @@ export function escapeHtml(value) {
         .replace(/'/g, "&#039;");
 }
 
-/* Convert a panel positioned via CSS right/transform into explicit
-   left/top coordinates relative to its host, so drag/resize math can work
-   with plain offsets. Used by the shared drag and resize controllers. */
 export function pinPanelPosition(container, host) {
     const rect = container.getBoundingClientRect();
     const hostRect = host.getBoundingClientRect();
@@ -163,10 +153,6 @@ export function pinPanelPosition(container, host) {
     return { left, top };
 }
 
-/* Add eight resize handles to a hierarchy panel. Resizing itself is entirely
-   engine-agnostic; adapters use onResizeEnd to refresh their chart-specific
-   docking space (Plotly margins or Highcharts spacing). Corner handles retain
-   the panel's aspect ratio, matching the original Plotly behavior. */
 export function attachPanelResize({
     container,
     inner,
@@ -267,8 +253,6 @@ export function attachPanelResize({
         onResizeEnd?.();
     }, { signal });
 
-    // Capture the panel's natural size before scaling. Thereafter the inner
-    // tree scales uniformly to fit any resized container and remains centred.
     const setupTimer = setTimeout(() => {
         const baseWidth = inner.offsetWidth;
         const baseHeight = inner.offsetHeight;
@@ -813,20 +797,11 @@ export function createHierarchyPanel({
 
 /* ---------- edge docking ---------- */
 
-/* Engine-agnostic docking: the panel starts docked on one edge with blank
-   space reserved there; dropped over the plot it floats and the space is
-   released; dropped near any edge it docks there. The engine-specific
-   "reserve blank space" primitive is injected via applySpace(side, band,
-   ...extra) - Highcharts uses chart spacing, plotly uses layout margins. */
 export function createPanelDocking({
     host,
     container,
     signal,
     applySpace,
-    // The box the panel docks against, in viewport coordinates. Defaults to
-    // the host, but engines whose plot element is smaller than the widget
-    // container (e.g. fixed-width ggplotly inside a full-width htmlwidget)
-    // should return the plot element's rect so the panel hugs the PLOT.
     getBounds = () => host.getBoundingClientRect(),
     gap = 20,        // panel to plot edge
     innerGap = 12,   // panel to plot area
@@ -901,7 +876,6 @@ export function createPanelDocking({
             if (dockedSide) snapPanel();
             apply(...extra);
         },
-        // Re-snap and re-reserve space, e.g. after the panel itself resizes.
         refresh() {
             if (!dockedSide) return;
             snapPanel();

@@ -26,7 +26,7 @@ A composable styling object that can be added to a \code{\link[=gig]{gig()}} plo
 \code{\link[=add_hierarchy_hc]{add_hierarchy_hc()}}.
 }
 \section{Status}{
-
+NA
 }
 
 \examples{

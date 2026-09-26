@@ -5,8 +5,6 @@ import {
   createHierarchyWidgetDocking
 } from "../core/floating-widget.js";
 
-// Return an outer grid whose chart cell is exactly square. The two gutters
-// belong to gig_point's variable selectors, not to the plotting region.
 export function calculateSquarePlotGrid(
   availableWidth,
   availableHeight,
@@ -39,10 +37,7 @@ export function initGigChrome({
 }) {
   const toolbar = root.querySelector(".gig-toolbar");
   const container = hierarchyWidget?.container;
-  // The toolbar and plot layout must still initialise for a plain (single
-  // series) gig widget. Previously, a missing hierarchy container returned
-  // here, leaving the plot underneath the toolbar and skipping the delayed
-  // Chart.js resize.
+
   if (!toolbar || !main) return null;
 
   let toolbarMode = "docked-left";

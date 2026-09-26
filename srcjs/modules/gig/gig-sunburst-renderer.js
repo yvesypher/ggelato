@@ -1,10 +1,5 @@
 /*
  * Shared sunburst renderer used by composition packages such as fridge.
- *
- * The standalone gig_sunburst widget and composed views must use the same
- * label geometry. In particular, deepest-level labels are placed outside the
- * circle and their font size is derived from the leaf's outer-edge length.
- * This prevents the fixed-size outer-label pile-up from the old renderer.
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -34,9 +29,6 @@ function labelFontSize(node) {
     : node.y1;
   const edgeLength = (node.x1 - node.x0) * labelRadius;
 
-  // The lower bound deliberately remains small. The whole sunburst group is
-  // zoomed, so a dense leaf label becomes readable as the user zooms in
-  // without colliding with its neighbours at the initial overview.
   return Math.max(0.75, Math.min(9, edgeLength * 0.68));
 }
 

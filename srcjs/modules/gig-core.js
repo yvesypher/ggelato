@@ -1,22 +1,11 @@
-// ---------------------------------------------------------------------------
-// Shared hierarchy machinery for ggelato widgets (gig_stldp, gig_sunburst)
-// safeConvert(), hierarchy syntax parsing, data-state rebuilding, and the
-// drag-to-reorder hierarchy legend with a per-variable hover dropdown:
-//   - checkbox per level value  -> highlight (select) that series in the plots
-//   - eye button per level value -> hide/unhide that series (and its subtree)
-// ---------------------------------------------------------------------------
 
 export const DEPTH_COLORS = ['#e76f51', '#f4a261', '#e9c46a', '#2a9d8f', '#264653'];
 export const getDepthColor = (depth) => DEPTH_COLORS[depth % DEPTH_COLORS.length];
 
 const SEP = '\u0001'; // internal separator for "key|value" hidden entries
 
-// Pseudo-key for the root ("Total") series so the Total chip can reuse the
-// same highlight / hide machinery as the real hierarchy variables.
 export const TOTAL_KEY = '__gig_total__';
 
-// htmlwidgets serialises data.frames as an object of column arrays;
-// convert to an array of row objects.
 export function safeConvert(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -127,8 +116,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
         if (id.split(SEP)[0] === key) this.hiddenValues.delete(id);
       });
     },
-    // A series is hidden if any of its (non-aggregated) key values is hidden.
-    // Hiding "NSW" under State therefore also hides all NSW regions.
     isSeriesHidden(d) {
       if (d._depth === 0 && this.isHidden(TOTAL_KEY, 'Total')) return true;
       for (const k of this.activeKeys) {
@@ -136,7 +123,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
       }
       return false;
     },
-    // All observed (non-aggregated) values of a hierarchy variable.
     valuesForKey(key) {
       if (key === TOTAL_KEY) return ['Total'];
       const set = new Set();
@@ -196,22 +182,6 @@ export function createHierState(rows, hierarchyStr, excludeKeys) {
   return state;
 }
 
-// ---------------------------------------------------------------------------
-// Hierarchy legend widget.
-//
-// renderLegend(container, state, onChange, hooks)
-//   onChange : fired after reorder / level enable-disable (structure changed)
-//   hooks    : optional, provided by the plot widget
-//     isChecked(key, value)          -> is that level's series highlighted?
-//     onCheck(key, value, checked)   -> (un)highlight that series
-//     onVisibilityChange()           -> redraw after hide/unhide (keep selection)
-//
-// Hovering a chip opens a dropdown listing every observation of that
-// variable. Each row has a checkbox (highlight in the plots) and an eye
-// button (hide/unhide from the plots). A count badge on the chip shows how
-// many values are currently hidden; "Show all" in the dropdown unhides them.
-// ---------------------------------------------------------------------------
-
 const ICON_EYE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
@@ -253,8 +223,6 @@ export function renderLegend(container, state, onChange, hooks) {
     });
   }
 
-  // Excel-filter style dropdown: search box on top, "(Select All)" as the
-  // first row (tri-state), then one row per observation with its eye button.
   function populateDropdown(key) {
     const isTotal = key === TOTAL_KEY;
     const allValues = state.valuesForKey(key);
@@ -761,6 +729,3 @@ export function initHierPanel(panelEl, hostEl, opts) {
     setDock
   };
 }
-
-// Styling ships as a real stylesheet: inst/htmlwidgets/lib/ggelato/styles.css,
-// declared as a dependency in each widget's inst/htmlwidgets/<name>.yaml.

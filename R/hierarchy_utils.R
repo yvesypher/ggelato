@@ -3,12 +3,15 @@
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
-ggelato_hierarchy_asset_version <- function() {
-  package_version <- tryCatch(
+ggelato_package_version <- function() {
+  tryCatch(
     as.character(utils::packageVersion("ggelato")),
     error = function(...) "0.0.0"
   )
-  paste0(package_version, ".18")
+}
+
+ggelato_hierarchy_asset_version <- function() {
+  ggelato_package_version()
 }
 
 #' Plot sizing policy shared by the native gig_* widgets
