@@ -176,7 +176,8 @@ export function renderSunburst(content, x, shared) {
       path.setAttribute("fill",
         style.c === "rgba(200,200,200,0.15)" ? "#e2e8f0" : style.c);
       path.setAttribute("stroke", "#ffffff");
-      path.setAttribute("stroke-width", style.w);
+      path.setAttribute("stroke-width", 0.5);
+      path.setAttribute("vector-effect", "non-scaling-stroke");
     });
 
     content.querySelectorAll(".gig-tree-label").forEach(label => {

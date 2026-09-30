@@ -24,6 +24,7 @@ library(fabletools)
 library(feasts)
 library(tsibble)
 library(dplyr)
+load("../data/tourism_new.rda")
 ```
 
 ## Data
@@ -31,8 +32,20 @@ library(dplyr)
 Australian Domestic Tourism data in `tsibble` package is used in this example. First, we need to aggregate the data by its hierarchical structure `(State/Region)*Purpose` using `fabletools::aggregate_key()`. This means that `Region` is nested within `State` and `Purpose` has crossed relationships with both of `State` and `Region`.
 
 ```{r data}
-tourism_hts <- tourism |>
-  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+tourism_hts <- bind_rows(tsibble::tourism, tourism_new) |>
+  mutate(
+    Region = recode(
+      Region,
+      "Experience Perth" = "Destination Perth",
+      "Launceston, Tamar and the North" = "Launceston and the North",
+      "Wilderness West" = "West Coast",
+      "Northern" = "Townsville",
+      "Outback" = "Outback Queensland",
+      "Darling Downs" = "Queensland Country",
+      "Kakadu Arnhem" = "Litchfield Kakadu Arnhem",
+      "Murraylands" = "Murray River, Lakes and Coorong"
+    )
+  ) |> aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 ```
 
 ## Time series features plot

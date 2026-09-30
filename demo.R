@@ -13,11 +13,11 @@ library(htmlwidgets)
 library(highcharter)
 
 ### Tourism data
-agg_tourism <- tourism |>
+agg_tourism <- tsibble::tourism |>
   aggregate_key((State/Region)*Purpose, Trips = sum(Trips)) |>
   mutate(across(c(State, Region, Purpose), as.character))
 
-agg_tourism_s <- tourism |>
+agg_tourism_s <- tsibble::tourism |>
   aggregate_key((State / Region)*Purpose, Trips = sum(Trips)) |>
   group_by_key() |>
   mutate(
@@ -277,6 +277,14 @@ tourism_stl <- gig(
   geom_stl(scaled = stl_scaled)
 
 tourism_stl
+
+tourism_feasts <- gig(tourism_ft,
+                      gig_aes(x = trend_strength,
+                              y = seasonal_strength_year),
+                      structure = (State/Region)*Purpose) +
+  geom_features()
+
+tourism_feasts
 
 fridge(tourism_stl,
        tourism_feasts,
