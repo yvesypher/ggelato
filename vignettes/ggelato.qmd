@@ -46,6 +46,9 @@ tourism_hts <- bind_rows(tsibble::tourism, tourism_new) |>
       "Murraylands" = "Murray River, Lakes and Coorong"
     )
   ) |> aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+
+tourism_hts <- tourism_new |> 
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 ```
 
 ## Time series features plot
