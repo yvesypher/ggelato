@@ -12,7 +12,10 @@ execute:
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE
 )
 ```
 
@@ -31,24 +34,59 @@ load("../data/tourism_new.rda")
 
 Australian Domestic Tourism data in `tsibble` package is used in this example. First, we need to aggregate the data by its hierarchical structure `(State/Region)*Purpose` using `fabletools::aggregate_key()`. This means that `Region` is nested within `State` and `Purpose` has crossed relationships with both of `State` and `Region`.
 
-```{r data}
-tourism_hts <- bind_rows(tsibble::tourism, tourism_new) |>
-  mutate(
-    Region = recode(
-      Region,
-      "Experience Perth" = "Destination Perth",
-      "Launceston, Tamar and the North" = "Launceston and the North",
-      "Wilderness West" = "West Coast",
-      "Northern" = "Townsville",
-      "Outback" = "Outback Queensland",
-      "Darling Downs" = "Queensland Country",
-      "Kakadu Arnhem" = "Litchfield Kakadu Arnhem",
-      "Murraylands" = "Murray River, Lakes and Coorong"
-    )
-  ) |> aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+```{r echo = FALSE}
+# tourism_hts <- bind_rows(tsibble::tourism, tourism_new) |>
+#   mutate(
+#     Region = recode(
+#       Region,
+#       "Experience Perth" = "Destination Perth",
+#       "Launceston, Tamar and the North" = "Launceston and the North",
+#       "Wilderness West" = "West Coast",
+#       "Northern" = "Townsville",
+#       "Outback" = "Outback Queensland",
+#       "Darling Downs" = "Queensland Country",
+#       "Kakadu Arnhem" = "Litchfield Kakadu Arnhem",
+#       "Murraylands" = "Murray River, Lakes and Coorong"
+#     )
+#   ) |> aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 
-tourism_hts <- tourism_new |> 
+```
+
+
+```{r data}
+new_name <- c(
+  "Experience Perth"                = "Destination Perth",
+  "Launceston, Tamar and the North" = "Launceston and the North",
+  "Wilderness West"                 = "West Coast",
+  "Northern"                        = "Townsville",
+  "Outback"                         = "Outback Queensland",
+  "Kakadu Arnhem"                   = "Litchfield Kakadu Arnhem",
+  "Murraylands"                     = "Murray River, Lakes and Coorong",
+  "Melbourne East"                  = "Yarra Valley and Dandenong Ranges",
+  "Upper Yarra"                     = "Yarra Valley and Dandenong Ranges",
+  "Darling Downs"                   = "Central Queensland")   # pooled, split below
+
+split_to <- c("Capricorn Coast", "Gladstone", "Queensland Country")
+
+# Update region names
+tourism_full <- bind_rows(tsibble::tourism, tourism_new) |> as_tibble() |>
+  mutate(Region = recode(Region, !!!new_name)) |>
+  summarise(Trips = sum(Trips), .by = c(Quarter, State, Region, Purpose))
+
+# Share of each new region in 2018-2022, by purpose
+region_share <- filter(tourism_full, Region %in% split_to) |>
+  summarise(p = sum(Trips), .by = c(Region, Purpose)) |> mutate(p = p / sum(p), .by = Purpose)
+
+# Split the pooled old series with those shares
+tourism_split <- filter(tourism_full, Region == "Central Queensland") |> select(-Region) |>
+  inner_join(region_share, by = "Purpose", relationship = "many-to-many") |> mutate(Trips = Trips * p, p = NULL)
+
+tourism_hts <- bind_rows(filter(tourism_full, Region != "Central Queensland"), tourism_split) |>
+  as_tsibble(index = Quarter, key = c(State, Region, Purpose)) |>
   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+
+# tourism_hts <- tsibble::tourism |> 
+#   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 ```
 
 ## Time series features plot
@@ -64,6 +102,7 @@ tourism_feasts <- gig(tourism_ft,
   geom_features()
 
 tourism_feasts
+
 ```
 
 ## STL decomposition plot
@@ -71,16 +110,14 @@ tourism_feasts
 ```{r reuse-2}
 stl_original <- tourism_hts |>
   model(stl = STL(Trips)) |>
-  components() |>
-  as_data_frame()
+  components()
 
 stl_scaled <- tourism_hts |>
   group_by_key() |>
   mutate(Trips = as.numeric(scale(Trips))) |>
   ungroup() |>
   model(stl = STL(Trips)) |>
-  components() |>
-  as_tibble()
+  components()
 
 tourism_stl <- gig(
   stl_original,
@@ -101,7 +138,7 @@ tourism_stl
 ## Sunburst
 
 ```{r sunburst}
-tourism_sunburst <- gig(as_tibble(tourism_hts), 
+tourism_sunburst <- gig(tourism_hts, 
     structure = (State/Region)*Purpose) +
   geom_sunburst(labels = TRUE) 
 

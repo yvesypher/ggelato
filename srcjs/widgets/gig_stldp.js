@@ -58,11 +58,11 @@ HTMLWidgets.widget({
       const isSel = selectedIndices.has(i);
       const isTop = d._depth === 0;
       if (hasSelection) {
-        if (isSel) return { c: state.depthColor(d._depth), w: 2.5, r: 0, o: -100 - d._depth };
-        return { c: 'rgba(200,200,200,0.15)', w: 1, r: 0, o: 50 + d._depth };
+        if (isSel) return { c: state.depthColor(d._depth), w: 2.5, r: 0, o: -100 - d._depth, focus: true };
+        return { c: 'rgba(200,200,200,0.15)', w: 1, r: 0, o: 50 + d._depth, focus: false };
       }
-      if (isTop && !totalDimmed) return { c: state.depthColor(d._depth), w: 2.5, r: 0, o: -100 };
-      return { c: 'rgba(200,200,200,0.15)', w: 1, r: 0, o: 50 + d._depth };
+      if (isTop && !totalDimmed) return { c: state.depthColor(d._depth), w: 2.5, r: 0, o: -100, focus: true };
+      return { c: 'rgba(200,200,200,0.15)', w: 1, r: 0, o: 50 + d._depth, focus: false };
     }
 
     function select(index, shift) {
@@ -130,11 +130,7 @@ HTMLWidgets.widget({
               node.addEventListener(type, handler, { ...(options || {}), signal: renderController.signal }),
             getStyle,
             select,
-            brush,
-            // Tooltip focus: with a selection active, hovering snaps only to
-            // selected series instead of the dimmed background lines.
-            hasSelection: () => selectedIndices.size > 0,
-            isSelected: i => selectedIndices.has(i)
+            brush
           };
 
           renderer = renderStldp(q('.gig-stldp-main'), x, shared);

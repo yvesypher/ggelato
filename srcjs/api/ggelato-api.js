@@ -43,7 +43,7 @@ import { renderSunburst } from '../modules/gig/gig-sunburst-renderer.js';
 import { renderPoint } from '../modules/gig/gig-point-renderer.js';
 import { renderStldp } from '../modules/gig/gig-stldp-renderer.js';
 
-const GGELATO_API_BUILD = '2026-08-27-shared-renderers-v1';
+const GGELATO_API_BUILD = '2026-10-17-stl-tooltip-focus';
 
 window.ggelatoAPI = {
   build: GGELATO_API_BUILD,

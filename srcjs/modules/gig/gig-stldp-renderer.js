@@ -18,11 +18,10 @@ const Y_AXIS_WIDTH = 78;
 const SERIES_LINE_WIDTH = 1;
 
 const FOCUS_MODE = 'gigFocusNearest';
-const focusFilters = new WeakMap();
 
-function ensureFocusMode() {
+function installFocusMode() {
   const modes = Chart.Interaction && Chart.Interaction.modes;
-  if (!modes || modes[FOCUS_MODE]) return;
+  if (!modes) return;
   modes[FOCUS_MODE] = function (chart, e) {
     const pos = ('native' in e) ? { x: e.x, y: e.y } : (() => {
       const rect = chart.canvas.getBoundingClientRect();
@@ -37,8 +36,10 @@ function ensureFocusMode() {
     let index = Math.round(chart.scales.x.getValueForPixel(pos.x));
     index = Math.max(0, Math.min(nLabels - 1, index));
 
-    const accepts = focusFilters.get(chart);
-    const metas = chart.getSortedVisibleDatasetMetas();
+    const metas = chart.getSortedVisibleDatasetMetas().filter(meta => {
+      const ds = chart.data.datasets[meta.index];
+      return Boolean(ds && ds._gigFocus);
+    });
     const nearestIn = candidates => {
       let best = null, bestDist = Infinity;
       candidates.forEach(meta => {
@@ -53,12 +54,7 @@ function ensureFocusMode() {
       return best;
     };
 
-    let hit = null;
-    if (accepts) {
-      const focused = metas.filter(meta => accepts(meta.index));
-      if (focused.length) hit = nearestIn(focused);
-    }
-    if (!hit) hit = nearestIn(metas);
+    const hit = nearestIn(metas);
     return hit ? [hit] : [];
   };
 }
@@ -152,14 +148,13 @@ export function renderStldp(content, x, shared) {
     return Number.isInteger(v) ? v : v.toFixed(4);
   }
 
-  function tooltipFocus(chart) {
-    if (typeof shared.hasSelection !== 'function' ||
-        typeof shared.isSelected !== 'function') return null;
-    return datasetIndex => {
-      if (!shared.hasSelection()) return false;
-      const ds = chart.data.datasets[datasetIndex];
-      return Boolean(ds && ds._trueIndex !== undefined && shared.isSelected(ds._trueIndex));
-    };
+  function seriesFocus(style, i) {
+    if (typeof style.focus === 'boolean') return style.focus;
+    if (typeof shared.hasSelection === 'function' &&
+        typeof shared.isSelected === 'function') {
+      return shared.hasSelection() ? Boolean(shared.isSelected(i)) : true;
+    }
+    return true;
   }
 
   function externalTooltipHandler(context) {
@@ -236,7 +231,7 @@ export function renderStldp(content, x, shared) {
   }
 
   function initCharts() {
-    ensureFocusMode();
+    installFocusMode();
     const common = {
       responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
       elements: { point: { radius: 0, hitRadius: 5 }, line: { borderWidth: 1, tension: 0 } },
@@ -283,10 +278,6 @@ export function renderStldp(content, x, shared) {
       trend: create('Trend', 'Trend', 'Trend'),
       season: create('Season', 'Seasonality', 'Seasonality'),
       remainder: create('Remainder', 'Remainder', 'Remainder')
-    });
-    Object.values(stlCharts).forEach(chart => {
-      const accepts = tooltipFocus(chart);
-      if (accepts) focusFilters.set(chart, accepts);
     });
     updateStlAxes();
   }
@@ -381,10 +372,11 @@ export function renderStldp(content, x, shared) {
         if (!labels) labels = rowsForSeries.map(r => r[timeVar]);
 
         const st = shared.getStyle(d, i);
+        const focus = seriesFocus(st, i);
         const mk = arr => ({
           data: arr, borderColor: st.c, backgroundColor: st.c, borderWidth: SERIES_LINE_WIDTH,
           order: st.o, pointRadius: 0, pointHitRadius: 5, tension: 0, fill: false,
-          _trueIndex: i
+          _trueIndex: i, _gigFocus: focus
         });
         ds.data.push(mk(rowsForSeries.map(r => r[valueVar])));
         ds.trend.push(mk(rowsForSeries.map(r => r[trendVar])));
@@ -406,6 +398,7 @@ export function renderStldp(content, x, shared) {
           dsi.backgroundColor = st.c;
           dsi.borderWidth = SERIES_LINE_WIDTH;
           dsi.order = st.o;
+          dsi._gigFocus = seriesFocus(st, dsi._trueIndex);
         });
         chart.update('none');
       });
