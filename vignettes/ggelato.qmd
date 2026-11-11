@@ -1,5 +1,6 @@
 ---
 title: "Interactive graphics for hierarchical time series"
+subtitle: "Getting started with `ggelato`"
 vignette: >
   %\VignetteIndexEntry{A grammar for hierarchical time series graphics}
   %\VignetteEngine{quarto::html}
@@ -19,7 +20,25 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r libraries}
+## Introduction
+
+Hierarchical time series arise when a collection of series can be aggregated along one or more nested or crossed variables. Examples include national, state and regional tourism counts, which may be further disaggregated by travel purpose. Exploring such data requires views that respect the aggregation structure and that allow an analyst to move between levels of the hierarchy.
+
+The `ggelato` package provides a layered grammar of graphics for hierarchical time series, modelled on the design of `ggplot2`. A plot is created with `gig()`, which holds the data, the aesthetic mapping and the hierarchical structure, and a single geometry is then added with `+`. The `fridge` package coordinates several `ggelato` plots in one interface, so that a selection made in one view is reflected in all others.
+
+This vignette introduces the main components of the grammar using the Australian domestic tourism data and concludes by combining three plots with `fridge()`.
+
+| Component | Role |
+|:----------|:-----|
+| `gig()` | Combines the data, the mapping and the hierarchical structure |
+| `gig_aes()` | Maps variables to channels such as `x`, `y`, `trend`, `seasonality` and `remainder` |
+| `geom_features()` | Scatterplot of time series features |
+| `geom_stl()` | Time series plot with the STL decomposition |
+| `geom_sunburst()` | Sunburst display of the hierarchy |
+
+## Setup
+
+```{r}
 # devtools::install("../fridge") #run this in console
 library(fridge)
 library(ggelato)
@@ -27,12 +46,18 @@ library(fabletools)
 library(feasts)
 library(tsibble)
 library(dplyr)
-load("../data/tourism_new.rda")
 ```
 
 ## Data
 
-Australian Domestic Tourism data in `tsibble` package is used in this example. First, we need to aggregate the data by its hierarchical structure `(State/Region)*Purpose` using `fabletools::aggregate_key()`. This means that `Region` is nested within `State` and `Purpose` has crossed relationships with both of `State` and `Region`.
+The `tourism` data in the `tsibble` package contain quarterly domestic overnight trips for Australian regions by travel purpose. The hierarchical structure is `(State/Region)*Purpose`. This means that `Region` is nested within `State`, while `Purpose` is crossed with both `State` and `Region`. The structure is imposed with `fabletools::aggregate_key()`, which adds the aggregate series at every level.
+
+```{r}
+tourism_hts <- tsibble::tourism |>
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+```
+
+The same `structure` formula is passed to `gig()` in every plot below, so that `ggelato` interprets the rows of the data in the same way as the aggregation.
 
 ```{r echo = FALSE}
 # tourism_hts <- bind_rows(tsibble::tourism, tourism_new) |>
@@ -53,43 +78,45 @@ Australian Domestic Tourism data in `tsibble` package is used in this example. F
 ```
 
 
-```{r data}
-new_name <- c(
-  "Experience Perth"                = "Destination Perth",
-  "Launceston, Tamar and the North" = "Launceston and the North",
-  "Wilderness West"                 = "West Coast",
-  "Northern"                        = "Townsville",
-  "Outback"                         = "Outback Queensland",
-  "Kakadu Arnhem"                   = "Litchfield Kakadu Arnhem",
-  "Murraylands"                     = "Murray River, Lakes and Coorong",
-  "Melbourne East"                  = "Yarra Valley and Dandenong Ranges",
-  "Upper Yarra"                     = "Yarra Valley and Dandenong Ranges",
-  "Darling Downs"                   = "Central Queensland")   # pooled, split below
-
-split_to <- c("Capricorn Coast", "Gladstone", "Queensland Country")
-
-# Update region names
-tourism_full <- bind_rows(tsibble::tourism, tourism_new) |> as_tibble() |>
-  mutate(Region = recode(Region, !!!new_name)) |>
-  summarise(Trips = sum(Trips), .by = c(Quarter, State, Region, Purpose))
-
-# Share of each new region in 2018-2022, by purpose
-region_share <- filter(tourism_full, Region %in% split_to) |>
-  summarise(p = sum(Trips), .by = c(Region, Purpose)) |> mutate(p = p / sum(p), .by = Purpose)
-
-# Split the pooled old series with those shares
-tourism_split <- filter(tourism_full, Region == "Central Queensland") |> select(-Region) |>
-  inner_join(region_share, by = "Purpose", relationship = "many-to-many") |> mutate(Trips = Trips * p, p = NULL)
-
-tourism_hts <- bind_rows(filter(tourism_full, Region != "Central Queensland"), tourism_split) |>
-  as_tsibble(index = Quarter, key = c(State, Region, Purpose)) |>
-  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+```{r echo = FALSE}
+# new_name <- c(
+#   "Experience Perth"                = "Destination Perth",
+#   "Launceston, Tamar and the North" = "Launceston and the North",
+#   "Wilderness West"                 = "West Coast",
+#   "Northern"                        = "Townsville",
+#   "Outback"                         = "Outback Queensland",
+#   "Kakadu Arnhem"                   = "Litchfield Kakadu Arnhem",
+#   "Murraylands"                     = "Murray River, Lakes and Coorong",
+#   "Melbourne East"                  = "Yarra Valley and Dandenong Ranges",
+#   "Upper Yarra"                     = "Yarra Valley and Dandenong Ranges",
+#   "Darling Downs"                   = "Central Queensland")   # pooled, split below
+# 
+# split_to <- c("Capricorn Coast", "Gladstone", "Queensland Country")
+# 
+# # Update region names
+# tourism_full <- bind_rows(tsibble::tourism, tourism_new) |> as_tibble() |>
+#   mutate(Region = recode(Region, !!!new_name)) |>
+#   summarise(Trips = sum(Trips), .by = c(Quarter, State, Region, Purpose))
+# 
+# # Share of each new region in 2018-2022, by purpose
+# region_share <- filter(tourism_full, Region %in% split_to) |>
+#   summarise(p = sum(Trips), .by = c(Region, Purpose)) |> mutate(p = p / sum(p), .by = Purpose)
+# 
+# # Split the pooled old series with those shares
+# tourism_split <- filter(tourism_full, Region == "Central Queensland") |> select(-Region) |>
+#   inner_join(region_share, by = "Purpose", relationship = "many-to-many") |> mutate(Trips = Trips * p, p = NULL)
+# 
+# tourism_hts <- bind_rows(filter(tourism_full, Region != "Central Queensland"), tourism_split) |>
+#   as_tsibble(index = Quarter, key = c(State, Region, Purpose)) |>
+#   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 
 # tourism_hts <- tsibble::tourism |> 
 #   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 ```
 
 ## Time series features plot
+
+Features summarise the shape of each series in a small number of numeric values. A feature table is computed with `feasts` and passed to `gig()`, with the features of interest mapped to `x` and `y`. The layer `geom_features()` then draws one point for each series in the hierarchy.
 
 ```{r hts features}
 tourism_ft <- tourism_hts |>
@@ -107,7 +134,9 @@ tourism_feasts
 
 ## STL decomposition plot
 
-```{r reuse-2}
+The decomposition of each series into trend, seasonal and remainder components is computed upstream with `fabletools` and `feasts`. The components are mapped with the channels `trend`, `seasonality` and `remainder`, and `geom_stl()` displays the series together with its components.
+
+```{r stl-components}
 stl_original <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components()
@@ -118,7 +147,9 @@ stl_scaled <- tourism_hts |>
   ungroup() |>
   model(stl = STL(Trips)) |>
   components()
+```
 
+```{r stldp}
 tourism_stl <- gig(
   stl_original,
   gig_aes(
@@ -135,7 +166,11 @@ tourism_stl <- gig(
 tourism_stl
 ```
 
+Series at different levels of the hierarchy differ greatly in scale. A second decomposition is therefore computed on standardised series and supplied through the `scaled` argument, which allows the plot to switch between the original and the standardised scale.
+
 ## Sunburst
+
+The sunburst displays the hierarchy itself, with one ring for each level. It requires no mapping beyond the structure, and the data are supplied as a plain tibble
 
 ```{r sunburst}
 tourism_sunburst <- gig(tourism_hts, 
@@ -147,6 +182,8 @@ tourism_sunburst
 
 ## Coordinating multiple plots with `fridge()` in `fridge` `R` package
 
+Each `ggelato` plot contains a single geometry. Several views are combined by passing the plots to `fridge()` from the `fridge` package. The views share a common selection, so that choosing a node of the hierarchy in the sunburst highlights the corresponding series in the features plot and in the decomposition plot.
+
 :::{.column-screen}
 ```{r}
 fridge(tourism_stl,
@@ -157,3 +194,12 @@ fridge(tourism_stl,
 
 :::
 
+## Summary
+
+A `ggelato` plot is built from the data, a mapping and a hierarchical structure, followed by one geometry. Features and decompositions are computed upstream with `feasts` and `fabletools`, which keeps the graphics layer separate from the modelling workflow. Multiple views are coordinated with `fridge()` rather than within a single plot.
+
+## Session information
+
+```{r session-info}
+sessionInfo()
+```
