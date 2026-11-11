@@ -7,7 +7,7 @@
 
 <!-- badges: end -->
 
-ggelato, which stands for “Grammar of graphics for exploring and
+`ggelato`, which stands for “Grammar of graphics for exploring and
 layering aggregated time-series objects”, is an R package for
 interactively visualising hierarchical time series. User can interact
 directly with all elements on the plot or with the assistance of the
@@ -16,7 +16,7 @@ toolbar and hierarchy widget.
 ## Installation
 
 You can install the development version of ggelato from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/yvesypher/ggelato.git) with:
 
 ``` r
 # install.packages("pak")
