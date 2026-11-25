@@ -4,7 +4,9 @@
 #
 # rhub::rhub_setup()
 #
-# It is unlikely that you need to modify this file manually.
+# Modified for ggelato: installs Quarto, which the vignettes need
+# (VignetteBuilder: quarto). Re-add these steps if rhub_setup() overwrites
+# this file.
 
 name: R-hub
 run-name: >-
@@ -64,6 +66,8 @@ jobs:
         with:
           token: ${{ secrets.RHUB_TOKEN }}
           job-config: ${{ matrix.config.job-config }}
+      # Added for ggelato: Quarto is needed to build the vignettes
+      - uses: quarto-dev/quarto-actions/setup@v2
       - uses: r-hub/actions/run-check@v1
         with:
           token: ${{ secrets.RHUB_TOKEN }}
@@ -93,6 +97,7 @@ jobs:
         with:
           job-config: ${{ matrix.config.job-config }}
           token: ${{ secrets.RHUB_TOKEN }}
+      - uses: quarto-dev/quarto-actions/setup@v2
       - uses: r-hub/actions/run-check@v1
         with:
           job-config: ${{ matrix.config.job-config }}

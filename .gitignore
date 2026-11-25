@@ -6,3 +6,5 @@ node_modules
 inst/doc
 **/.quarto/
 docs
+/doc/
+/Meta/
