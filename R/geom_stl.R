@@ -54,6 +54,29 @@ geom_stl <- function(mapping = NULL, scaled = NULL,
 #' @return `geom_stlOutput()` returns a Shiny output element and
 #'   `renderGeomStl()` returns a Shiny render function.
 #'
+#' @examplesIf interactive() && requireNamespace("feasts", quietly = TRUE)
+#' library(shiny)
+#' library(fabletools)
+#' library(feasts)
+#'
+#' tas_hts <- aggregate_key(
+#'   aus_tourism[aus_tourism$State == "Tasmania", ],
+#'   (State / Region) * Purpose, Trips = sum(Trips)
+#' )
+#' tas_stl <- components(model(tas_hts, stl = STL(Trips)))
+#'
+#' ui <- fluidPage(geom_stlOutput("stl", height = "600px"))
+#' server <- function(input, output, session) {
+#'   output$stl <- renderGeomStl(
+#'     gig(tas_stl,
+#'         gig_aes(x = Quarter, y = Trips, trend = trend,
+#'                 seasonality = season_year, remainder = remainder)) +
+#'       geom_stl() +
+#'       hierarchy((State / Region) * Purpose)
+#'   )
+#' }
+#' shinyApp(ui, server)
+#'
 #' @name geom_stl-shiny
 #' @export
 geom_stlOutput <- function(outputId, width = "100%", height = "400px") {
@@ -63,5 +86,6 @@ geom_stlOutput <- function(outputId, width = "100%", height = "400px") {
 #' @rdname geom_stl-shiny
 #' @export
 renderGeomStl <- function(expr, env = parent.frame(), quoted = FALSE) {
-  render_gig_widget(expr, geom_stlOutput, env, quoted)
+  if (!quoted) expr <- substitute(expr)
+  render_gig_widget(expr, geom_stlOutput, env)
 }

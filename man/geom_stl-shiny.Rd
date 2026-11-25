@@ -30,3 +30,28 @@ number, which is coerced to a string and has \code{"px"} appended.}
 Output and render functions for using a \code{gig() + geom_stl()} plot within
 Shiny applications and interactive R Markdown documents.
 }
+\examples{
+\dontshow{if (interactive() && requireNamespace("feasts", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(shiny)
+library(fabletools)
+library(feasts)
+
+tas_hts <- aggregate_key(
+  aus_tourism[aus_tourism$State == "Tasmania", ],
+  (State / Region) * Purpose, Trips = sum(Trips)
+)
+tas_stl <- components(model(tas_hts, stl = STL(Trips)))
+
+ui <- fluidPage(geom_stlOutput("stl", height = "600px"))
+server <- function(input, output, session) {
+  output$stl <- renderGeomStl(
+    gig(tas_stl,
+        gig_aes(x = Quarter, y = Trips, trend = trend,
+                seasonality = season_year, remainder = remainder)) +
+      geom_stl() +
+      hierarchy((State / Region) * Purpose)
+  )
+}
+shinyApp(ui, server)
+\dontshow{\}) # examplesIf}
+}

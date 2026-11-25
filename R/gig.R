@@ -36,8 +36,9 @@
 #'   features(Trips, feat_stl)
 #'
 #' gig(tas_features,
-#'     gig_aes(x = trend_strength, y = seasonal_strength_year),
-#'     structure = (State / Region) * Purpose) +
+#'   gig_aes(x = trend_strength, y = seasonal_strength_year),
+#'   structure = (State / Region) * Purpose
+#' ) +
 #'   geom_features()
 #'
 #' @seealso [gig_aes()], [hierarchy()], [gig_build()]
@@ -103,9 +104,9 @@ is_gig <- function(x) inherits(x, "gig")
   } else if (is_gig_aes(e2)) {
     e1$mapping <- merge_gig_aes(e1$mapping, e2)
   } else if (is.list(e2) && !is.data.frame(e2) &&
-             all(vapply(e2, function(item) {
-               is_gig_layer(item) || is_gig_hierarchy(item) || is_gig_aes(item)
-             }, logical(1)))) {
+    all(vapply(e2, function(item) {
+      is_gig_layer(item) || is_gig_hierarchy(item) || is_gig_aes(item)
+    }, logical(1)))) {
     # A list of components, so `p + list(geom_features(), h)` works.
     for (item in e2) e1 <- e1 + item
   } else {
@@ -150,7 +151,8 @@ knit_print.gig <- function(x, ...) {
 #' @examplesIf requireNamespace("fabletools", quietly = TRUE)
 #' tas_hts <- fabletools::aggregate_key(
 #'   aus_tourism[aus_tourism$State == "Tasmania", ],
-#'   (State / Region) * Purpose, Trips = sum(Trips)
+#'   (State / Region) * Purpose,
+#'   Trips = sum(Trips)
 #' )
 #'
 #' plot_spec <- gig(tas_hts, structure = (State / Region) * Purpose) +
@@ -183,10 +185,9 @@ gig_build <- function(x) {
   layer <- x$layers[[1L]]
   structure_string <- gig_hierarchy_string(x$hierarchy)
 
-  switch(
-    layer$geom,
+  switch(layer$geom,
     features = build_gig_features(x, layer, structure_string),
-    stl      = build_gig_stl(x, layer, structure_string),
+    stl = build_gig_stl(x, layer, structure_string),
     sunburst = build_gig_sunburst(x, layer, structure_string),
     stop("Unknown gig geom: '", layer$geom, "'.", call. = FALSE)
   )
@@ -244,7 +245,8 @@ build_gig_stl <- function(x, layer, structure_string) {
     scaled_data <- as.data.frame(scaled_data)
     if (!time_column %in% names(scaled_data)) {
       stop("Time column `", time_column, "` was not found in `scaled`.",
-           call. = FALSE)
+        call. = FALSE
+      )
     }
   }
 

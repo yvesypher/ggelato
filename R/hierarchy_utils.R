@@ -33,7 +33,7 @@ ggelato_apply_widget_size <- function(plot, width = NULL, height = NULL) {
 
 hierarchy_validate_structure <- function(structure) {
   if (!is.character(structure) || length(structure) != 1L ||
-      is.na(structure) || !nzchar(trimws(structure))) {
+    is.na(structure) || !nzchar(trimws(structure))) {
     stop("`structure` must be a non-empty character string.", call. = FALSE)
   }
   invisible(structure)
@@ -48,7 +48,9 @@ hierarchy_structure_keys <- function(structure) {
 }
 
 hierarchy_is_aggregated <- function(value) {
-  if (is.null(value) || length(value) != 1L) return(TRUE)
+  if (is.null(value) || length(value) != 1L) {
+    return(TRUE)
+  }
   value <- trimws(as.character(value))
   is.na(value) || !nzchar(value) ||
     tolower(value) %in% c(
@@ -67,12 +69,14 @@ hierarchy_readable_name <- function(hierarchy) {
 
 hierarchy_parse_interaction_name <- function(series_name, keys) {
   if (is.null(series_name) || length(series_name) != 1L ||
-      is.na(series_name)) {
+    is.na(series_name)) {
     return(NULL)
   }
 
   series_name <- trimws(as.character(series_name))
-  if (!nzchar(series_name)) return(NULL)
+  if (!nzchar(series_name)) {
+    return(NULL)
+  }
 
   keyed <- stats::setNames(vector("list", length(keys)), keys)
   for (key in keys) {
@@ -91,7 +95,9 @@ hierarchy_parse_interaction_name <- function(series_name, keys) {
       keyed[[key]] <- hierarchy_clean_value(trimws(value[[2]]))
     }
   }
-  if (all(vapply(keyed, Negate(is.null), logical(1)))) return(keyed)
+  if (all(vapply(keyed, Negate(is.null), logical(1)))) {
+    return(keyed)
+  }
 
   separators <- c(".", "/", "|", " > ", " -> ", " \u203a ", " \u2192 ", " \u00bb ")
   for (separator in separators) {
@@ -113,13 +119,17 @@ hierarchy_parse_interaction_name <- function(series_name, keys) {
 }
 
 hierarchy_get_named_value <- function(object, key) {
-  if (!is.list(object) || is.null(names(object))) return(NULL)
+  if (!is.list(object) || is.null(names(object))) {
+    return(NULL)
+  }
   index <- match(tolower(key), tolower(names(object)))
   if (is.na(index)) NULL else object[[index]]
 }
 
 hierarchy_from_object <- function(object, keys) {
-  if (!is.list(object)) return(NULL)
+  if (!is.list(object)) {
+    return(NULL)
+  }
 
   custom <- object$custom
   sources <- list(
@@ -146,7 +156,9 @@ hierarchy_from_object <- function(object, keys) {
 
 hierarchy_extract_series <- function(series, keys) {
   hierarchy <- hierarchy_from_object(series, keys)
-  if (!is.null(hierarchy)) return(hierarchy)
+  if (!is.null(hierarchy)) {
+    return(hierarchy)
+  }
 
   first_point <- if (length(series$data) && is.list(series$data[[1]])) {
     series$data[[1]]
@@ -154,7 +166,9 @@ hierarchy_extract_series <- function(series, keys) {
     NULL
   }
   hierarchy <- hierarchy_from_object(first_point, keys)
-  if (!is.null(hierarchy)) return(hierarchy)
+  if (!is.null(hierarchy)) {
+    return(hierarchy)
+  }
 
   hierarchy_parse_interaction_name(series$name, keys)
 }
@@ -177,13 +191,17 @@ hierarchy_series_depth <- function(hierarchy, keys) {
 
 .hierarchy_day_number <- function(value) {
   if (length(value) != 1L || is.character(value) ||
-      is.factor(value) || is.logical(value)) {
+    is.factor(value) || is.logical(value)) {
     return(NA_real_)
   }
-  if (is.numeric(value)) return(as.numeric(value))
+  if (is.numeric(value)) {
+    return(as.numeric(value))
+  }
 
   date <- tryCatch(as.Date(value), error = function(...) NULL)
-  if (length(date) == 1L && !is.na(date)) return(as.numeric(date))
+  if (length(date) == 1L && !is.na(date)) {
+    return(as.numeric(date))
+  }
 
   number <- suppressWarnings(tryCatch(
     as.numeric(unclass(value)),
@@ -193,12 +211,18 @@ hierarchy_series_depth <- function(hierarchy, keys) {
 }
 
 hierarchy_detect_time_labels <- function(plot) {
-  if (identical(plot$x$hc_opts$xAxis$type, "datetime")) return("none")
+  if (identical(plot$x$hc_opts$xAxis$type, "datetime")) {
+    return("none")
+  }
 
   series <- plot$x$hc_opts$series
-  if (!length(series)) return("none")
+  if (!length(series)) {
+    return("none")
+  }
   points <- series[[1]]$data
-  if (!length(points)) return("none")
+  if (!length(points)) {
+    return("none")
+  }
 
   x_values <- vapply(
     utils::head(points, 100L),
@@ -210,21 +234,29 @@ hierarchy_detect_time_labels <- function(plot) {
   x_values <- x_values[is.finite(x_values)]
 
   if (length(x_values) < 2L || any(x_values < 3000 | x_values > 40000) ||
-      any(x_values != round(x_values))) {
+    any(x_values != round(x_values))) {
     return("none")
   }
 
   dates <- as.Date(x_values, origin = "1970-01-01")
-  if (!all(format(dates, "%d") == "01")) return("date")
+  if (!all(format(dates, "%d") == "01")) {
+    return("date")
+  }
 
   months <- as.integer(format(dates, "%m"))
-  if (all(months %in% c(1L, 4L, 7L, 10L))) return("quarter")
-  if (all(months == 1L)) return("year")
+  if (all(months %in% c(1L, 4L, 7L, 10L))) {
+    return("quarter")
+  }
+  if (all(months == 1L)) {
+    return("year")
+  }
   "month"
 }
 
 .hierarchy_clean_axis_label <- function(value) {
-  if (is.null(value)) return(NULL)
+  if (is.null(value)) {
+    return(NULL)
+  }
   if (is.character(value) && length(value) >= 1L) {
     value <- value[[1]]
   } else if (inherits(value, "formula") && length(value) >= 2L) {
@@ -242,7 +274,7 @@ hierarchy_detect_time_labels <- function(plot) {
 
 .hierarchy_same_scalar <- function(x, y) {
   if (is.null(x) || is.null(y) || length(x) != 1L || length(y) != 1L ||
-      is.na(x) || is.na(y)) {
+    is.na(x) || is.na(y)) {
     return(FALSE)
   }
   if (identical(x, y) || identical(as.character(x), as.character(y))) {
@@ -321,10 +353,11 @@ hierarchy_infer_axis_name <- function(plot, coordinate, hierarchy_keys) {
 }
 
 hierarchy_apply_time_labels <- function(plot, granularity) {
-  if (granularity == "none") return(plot)
+  if (granularity == "none") {
+    return(plot)
+  }
 
-  label_expression <- switch(
-    granularity,
+  label_expression <- switch(granularity,
     quarter = "y + ' Q' + (Math.floor(m / 3) + 1)",
     month = paste0(
       "y + ' ' + ['Jan','Feb','Mar','Apr','May','Jun',",

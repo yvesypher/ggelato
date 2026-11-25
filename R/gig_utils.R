@@ -114,8 +114,16 @@ gig_widget_output <- function(output_id, widget_name,
 }
 
 #' Shared Shiny render helper for gig_* widgets
+#'
+#' `expr` must already be quoted by the exported render function, because
+#' `substitute()` only captures the caller's own argument. The expression is
+#' wrapped so that a `gig` specification is built into its htmlwidget.
 #' @noRd
-render_gig_widget <- function(expr, output_function, env, quoted) {
-  if (!quoted) expr <- substitute(expr)
+render_gig_widget <- function(expr, output_function, env) {
+  expr <- as.call(list(as_gig_widget, expr))
   htmlwidgets::shinyRenderWidget(expr, output_function, env, quoted = TRUE)
+}
+
+as_gig_widget <- function(x) {
+  if (is_gig(x)) gig_build(x) else x
 }

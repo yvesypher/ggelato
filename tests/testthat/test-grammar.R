@@ -9,7 +9,7 @@ test_that("hierarchy() accepts expressions and strings", {
 
 test_that("gig_aes() drops NULL aesthetics", {
   mapping <- gig_aes(x = trend_strength, y = NULL)
-  expect_identical(names(mapping), "x")
+  expect_named(mapping, "x")
 })
 
 test_that("components are added with +", {

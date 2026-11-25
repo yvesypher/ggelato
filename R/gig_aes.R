@@ -18,8 +18,10 @@
 #'
 #' @examples
 #' gig_aes(x = trend_strength, y = seasonal_strength_year)
-#' gig_aes(x = Quarter, y = Trips, trend = trend,
-#'         seasonality = season_year, remainder = remainder)
+#' gig_aes(
+#'   x = Quarter, y = Trips, trend = trend,
+#'   seasonality = season_year, remainder = remainder
+#' )
 #'
 #' @seealso [gig()], [geom_features()], [geom_stl()]
 #' @export
@@ -47,7 +49,9 @@ print.gig_aes <- function(x, ...) {
   cat("<gig_aes>\n")
   for (name in names(x)) {
     cat("  ", name, " -> ",
-        rlang::expr_text(rlang::quo_get_expr(x[[name]])), "\n", sep = "")
+      rlang::expr_text(rlang::quo_get_expr(x[[name]])), "\n",
+      sep = ""
+    )
   }
   invisible(x)
 }
@@ -64,8 +68,12 @@ is_gig_aes <- function(x) inherits(x, "gig_aes")
 # Combine a plot-level mapping with a layer-level override. Later wins, the
 # same precedence ggplot2 gives a layer's own aes().
 merge_gig_aes <- function(base, override) {
-  if (is.null(override) || length(override) == 0L) return(base)
-  if (is.null(base) || length(base) == 0L) return(override)
+  if (is.null(override) || length(override) == 0L) {
+    return(base)
+  }
+  if (is.null(base) || length(base) == 0L) {
+    return(override)
+  }
   structure(
     utils::modifyList(unclass(base), unclass(override)),
     class = "gig_aes"

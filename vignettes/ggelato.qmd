@@ -74,8 +74,10 @@ The feature-space plot displays each series as one point, positioned by two feat
 tourism_features <- tourism_hts |>
   features(Trips, feat_stl)
 
-gig(tourism_features,
-    gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+gig(
+  tourism_features,
+  gig_aes(x = trend_strength, y = seasonal_strength_year)
+) +
   geom_features() +
   tourism_structure
 ```
@@ -92,9 +94,13 @@ tourism_stl <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components()
 
-gig(tourism_stl,
-    gig_aes(x = Quarter, y = Trips, trend = trend,
-            seasonality = season_year, remainder = remainder)) +
+gig(
+  tourism_stl,
+  gig_aes(
+    x = Quarter, y = Trips, trend = trend,
+    seasonality = season_year, remainder = remainder
+  )
+) +
   geom_stl() +
   tourism_structure
 ```
@@ -111,9 +117,13 @@ tourism_stl_scaled <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components()
 
-gig(tourism_stl,
-    gig_aes(x = Quarter, y = Trips, trend = trend,
-            seasonality = season_year, remainder = remainder)) +
+gig(
+  tourism_stl,
+  gig_aes(
+    x = Quarter, y = Trips, trend = trend,
+    seasonality = season_year, remainder = remainder
+  )
+) +
   geom_stl(scaled = tourism_stl_scaled) +
   tourism_structure
 ```
@@ -137,7 +147,6 @@ The hierarchy widget can also be added to line plots made with `plotly::ggplotly
 
 ```{r}
 #| label: highcharter
-#| eval: false
 library(highcharter)
 
 tourism_lines <- data.frame(
@@ -150,7 +159,8 @@ tourism_lines <- data.frame(
 
 highchart() |>
   hc_add_series(
-    tourism_lines, type = "line",
+    tourism_lines,
+    type = "line",
     hcaes(x = Quarter, y = Trips, group = interaction(State, Region, Purpose))
   ) |>
   add_hierarchy_hc("(State/Region)*Purpose")
@@ -169,8 +179,10 @@ ui <- fluidPage(geom_featuresOutput("features", height = "600px"))
 
 server <- function(input, output, session) {
   output$features <- renderGeomFeatures(
-    gig(tourism_features,
-        gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+    gig(
+      tourism_features,
+      gig_aes(x = trend_strength, y = seasonal_strength_year)
+    ) +
       geom_features() +
       tourism_structure
   )

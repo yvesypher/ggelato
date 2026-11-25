@@ -35,7 +35,8 @@ Suggests:
     quarto,
     testthat (>= 3.0.0),
     tsibble,
-    dplyr
+    dplyr,
+    shiny
 Depends: R (>= 4.1.0)
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: quarto

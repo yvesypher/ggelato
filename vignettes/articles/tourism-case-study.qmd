@@ -74,7 +74,6 @@ The same `structure` formula is passed to `gig()` in every plot below, so that `
 #       "Murraylands" = "Murray River, Lakes and Coorong"
 #     )
 #   ) |> aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
-
 ```
 
 
@@ -90,27 +89,27 @@ The same `structure` formula is passed to `gig()` in every plot below, so that `
 #   "Melbourne East"                  = "Yarra Valley and Dandenong Ranges",
 #   "Upper Yarra"                     = "Yarra Valley and Dandenong Ranges",
 #   "Darling Downs"                   = "Central Queensland")   # pooled, split below
-# 
+#
 # split_to <- c("Capricorn Coast", "Gladstone", "Queensland Country")
-# 
+#
 # # Update region names
 # tourism_full <- bind_rows(tsibble::tourism, tourism_new) |> as_tibble() |>
 #   mutate(Region = recode(Region, !!!new_name)) |>
 #   summarise(Trips = sum(Trips), .by = c(Quarter, State, Region, Purpose))
-# 
+#
 # # Share of each new region in 2018-2022, by purpose
 # region_share <- filter(tourism_full, Region %in% split_to) |>
 #   summarise(p = sum(Trips), .by = c(Region, Purpose)) |> mutate(p = p / sum(p), .by = Purpose)
-# 
+#
 # # Split the pooled old series with those shares
 # tourism_split <- filter(tourism_full, Region == "Central Queensland") |> select(-Region) |>
 #   inner_join(region_share, by = "Purpose", relationship = "many-to-many") |> mutate(Trips = Trips * p, p = NULL)
-# 
+#
 # tourism_hts <- bind_rows(filter(tourism_full, Region != "Central Queensland"), tourism_split) |>
 #   as_tsibble(index = Quarter, key = c(State, Region, Purpose)) |>
 #   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 
-# tourism_hts <- tsibble::tourism |> 
+# tourism_hts <- tsibble::tourism |>
 #   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 ```
 
@@ -123,13 +122,15 @@ tourism_ft <- tourism_hts |>
   features(Trips, feature_set(pkgs = "feasts"))
 
 tourism_feasts <- gig(tourism_ft,
-    gig_aes(x = trend_strength, 
-            y = seasonal_strength_year),
-    structure = (State/Region)*Purpose) +
+  gig_aes(
+    x = trend_strength,
+    y = seasonal_strength_year
+  ),
+  structure = (State / Region) * Purpose
+) +
   geom_features()
 
 tourism_feasts
-
 ```
 
 ## STL decomposition plot
@@ -173,9 +174,10 @@ Series at different levels of the hierarchy differ greatly in scale. A second de
 The sunburst displays the hierarchy itself, with one ring for each level. It requires no mapping beyond the structure, and the data are supplied as a plain tibble
 
 ```{r sunburst}
-tourism_sunburst <- gig(tourism_hts, 
-    structure = (State/Region)*Purpose) +
-  geom_sunburst(labels = TRUE) 
+tourism_sunburst <- gig(tourism_hts,
+  structure = (State / Region) * Purpose
+) +
+  geom_sunburst(labels = TRUE)
 
 tourism_sunburst
 ```
@@ -187,9 +189,9 @@ Each `ggelato` plot contains a single geometry. Several views are combined by pa
 :::{.column-screen}
 ```{r}
 # fridge(tourism_stl,
-#        tourism_feasts, 
-#        tourism_sunburst, 
-#        fullscreen = FALSE) 
+#        tourism_feasts,
+#        tourism_sunburst,
+#        fullscreen = FALSE)
 ```
 
 :::

@@ -51,6 +51,26 @@ geom_sunburst <- function(mapping = NULL, labels = TRUE,
 #' @return `geom_sunburstOutput()` returns a Shiny output element and
 #'   `renderGeomSunburst()` returns a Shiny render function.
 #'
+#' @examplesIf interactive() && requireNamespace("feasts", quietly = TRUE)
+#' library(shiny)
+#' library(fabletools)
+#' library(feasts)
+#'
+#' tas_hts <- aggregate_key(
+#'   aus_tourism[aus_tourism$State == "Tasmania", ],
+#'   (State / Region) * Purpose, Trips = sum(Trips)
+#' )
+#'
+#' ui <- fluidPage(geom_sunburstOutput("structure", height = "600px"))
+#' server <- function(input, output, session) {
+#'   output$structure <- renderGeomSunburst(
+#'     gig(tas_hts) +
+#'       geom_sunburst() +
+#'       hierarchy((State / Region) * Purpose)
+#'   )
+#' }
+#' shinyApp(ui, server)
+#'
 #' @name geom_sunburst-shiny
 #' @export
 geom_sunburstOutput <- function(outputId, width = "100%", height = "400px") {
@@ -60,5 +80,6 @@ geom_sunburstOutput <- function(outputId, width = "100%", height = "400px") {
 #' @rdname geom_sunburst-shiny
 #' @export
 renderGeomSunburst <- function(expr, env = parent.frame(), quoted = FALSE) {
-  render_gig_widget(expr, geom_sunburstOutput, env, quoted)
+  if (!quoted) expr <- substitute(expr)
+  render_gig_widget(expr, geom_sunburstOutput, env)
 }

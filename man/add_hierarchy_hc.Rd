@@ -44,7 +44,8 @@ library(highcharter)
 
 tas_hts <- fabletools::aggregate_key(
   aus_tourism[aus_tourism$State == "Tasmania", ],
-  (State / Region) * Purpose, Trips = sum(Trips)
+  (State / Region) * Purpose,
+  Trips = sum(Trips)
 )
 tas_hts <- data.frame(
   Quarter = as.numeric(as.Date(tas_hts$Quarter)),
@@ -56,7 +57,8 @@ tas_hts <- data.frame(
 
 tas_plot <- highchart() |>
   hc_add_series(
-    tas_hts, type = "line",
+    tas_hts,
+    type = "line",
     hcaes(x = Quarter, y = Trips, group = interaction(State, Region, Purpose))
   )
 add_hierarchy_hc(tas_plot, "(State/Region)*Purpose")

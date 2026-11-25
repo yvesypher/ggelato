@@ -39,8 +39,10 @@ Aesthetics are given as bare column names or expressions, as in
 }
 \examples{
 gig_aes(x = trend_strength, y = seasonal_strength_year)
-gig_aes(x = Quarter, y = Trips, trend = trend,
-        seasonality = season_year, remainder = remainder)
+gig_aes(
+  x = Quarter, y = Trips, trend = trend,
+  seasonality = season_year, remainder = remainder
+)
 
 }
 \seealso{

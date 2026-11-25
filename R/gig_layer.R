@@ -24,7 +24,8 @@ print.gig_layer <- function(x, ...) {
   cat("<gig_layer> geom: ", x$geom, "\n", sep = "")
   if (!is.null(x$mapping) && length(x$mapping)) {
     cat("  mapping override: ", paste(names(x$mapping), collapse = ", "), "\n",
-        sep = "")
+      sep = ""
+    )
   }
   invisible(x)
 }

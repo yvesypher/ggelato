@@ -30,3 +30,25 @@ number, which is coerced to a string and has \code{"px"} appended.}
 Output and render functions for using a \code{gig() + geom_sunburst()} plot
 within Shiny applications and interactive R Markdown documents.
 }
+\examples{
+\dontshow{if (interactive() && requireNamespace("feasts", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(shiny)
+library(fabletools)
+library(feasts)
+
+tas_hts <- aggregate_key(
+  aus_tourism[aus_tourism$State == "Tasmania", ],
+  (State / Region) * Purpose, Trips = sum(Trips)
+)
+
+ui <- fluidPage(geom_sunburstOutput("structure", height = "600px"))
+server <- function(input, output, session) {
+  output$structure <- renderGeomSunburst(
+    gig(tas_hts) +
+      geom_sunburst() +
+      hierarchy((State / Region) * Purpose)
+  )
+}
+shinyApp(ui, server)
+\dontshow{\}) # examplesIf}
+}

@@ -22,19 +22,26 @@
 #'
 #' tas_hts <- fabletools::aggregate_key(
 #'   aus_tourism[aus_tourism$State == "Tasmania", ],
-#'   (State / Region) * Purpose, Trips = sum(Trips)
+#'   (State / Region) * Purpose,
+#'   Trips = sum(Trips)
 #' )
 #' tas_hts$series <- paste0(
 #'   "State: ", tas_hts$State, "<br>Region: ", tas_hts$Region,
 #'   "<br>Purpose: ", tas_hts$Purpose
 #' )
 #'
-#' tas_plot <- ggplot(as.data.frame(tas_hts),
-#'                    aes(x = as.Date(Quarter), y = Trips,
-#'                        group = series, text = series)) +
+#' tas_plot <- ggplot(
+#'   as.data.frame(tas_hts),
+#'   aes(
+#'     x = as.Date(Quarter), y = Trips,
+#'     group = series, text = series
+#'   )
+#' ) +
 #'   geom_line()
-#' add_hierarchy_plotly(plotly::ggplotly(tas_plot, tooltip = "text"),
-#'                      "(State/Region)*Purpose")
+#' add_hierarchy_plotly(
+#'   plotly::ggplotly(tas_plot, tooltip = "text"),
+#'   "(State/Region)*Purpose"
+#' )
 #'
 #' @seealso [add_hierarchy_hc()]
 #' @export

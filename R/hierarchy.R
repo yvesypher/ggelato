@@ -35,7 +35,7 @@ new_gig_hierarchy_from_quo <- function(quo) {
     return(evaluated)
   }
   if (is.character(evaluated) && length(evaluated) == 1L &&
-      !is.na(evaluated) && nzchar(evaluated)) {
+    !is.na(evaluated) && nzchar(evaluated)) {
     return(new_gig_hierarchy(evaluated))
   }
 
@@ -81,9 +81,15 @@ is_gig_hierarchy <- function(x) inherits(x, "gig_hierarchy")
 #' as_gig_hierarchy("(State/Region)*Purpose")
 #' @export
 as_gig_hierarchy <- function(x) {
-  if (is.null(x)) return(NULL)
-  if (is_gig_hierarchy(x)) return(x)
-  if (is.character(x) && length(x) == 1L) return(new_gig_hierarchy(x))
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (is_gig_hierarchy(x)) {
+    return(x)
+  }
+  if (is.character(x) && length(x) == 1L) {
+    return(new_gig_hierarchy(x))
+  }
   stop(
     "Cannot interpret a <", class(x)[[1L]],
     "> as a hierarchy specification. Supply a string or hierarchy().",
