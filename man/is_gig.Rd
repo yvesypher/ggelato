@@ -15,3 +15,6 @@ is_gig(x)
 \description{
 Is this object a gig plot specification?
 }
+\examples{
+is_gig(gig(aus_tourism))
+}

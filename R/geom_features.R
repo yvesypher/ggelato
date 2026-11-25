@@ -1,22 +1,29 @@
 #' Feature-space scatter layer
 #'
-#' Draws each series as a point in feature space (e.g. trend strength vs
-#' seasonal strength), where users can interact with the axis to change variables of time series features
+#' Draws each series as a point in a two-dimensional feature space, such as
+#' trend strength against seasonal strength. The variables on either axis can
+#' be changed interactively to any other numeric column of `data`.
 #'
-#' @param mapping Optional layer-level [gig_aes()] overriding the plot
-#'   mapping.
-#' @param width,height Optional explicit widget size (any valid CSS unit).
-#'   When omitted, sizing follows the usual htmlwidgets/knitr policy.
+#' @param mapping Optional layer-level [gig_aes()] that overrides the plot
+#'   mapping. `x` and `y` give the initial feature columns.
+#' @param width,height Optional widget size (any valid CSS unit). When
+#'   omitted, sizing follows the htmlwidgets and knitr defaults.
 #' @param elementId Optional element id.
 #'
 #' @return A `gig_layer`.
 #'
-#' @examples
-#' \dontrun{
-#' gig(tourism_ft, gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+#' @examplesIf requireNamespace("feasts", quietly = TRUE)
+#' library(fabletools)
+#' library(feasts)
+#'
+#' tas_tourism <- aus_tourism[aus_tourism$State == "Tasmania", ]
+#' tas_features <- tas_tourism |>
+#'   aggregate_key((State / Region) * Purpose, Trips = sum(Trips)) |>
+#'   features(Trips, feat_stl)
+#'
+#' gig(tas_features, gig_aes(x = trend_strength, y = seasonal_strength_year)) +
 #'   geom_features() +
 #'   hierarchy((State / Region) * Purpose)
-#' }
 #'
 #' @seealso [gig()]
 #' @export
@@ -29,16 +36,20 @@ geom_features <- function(mapping = NULL, width = NULL, height = NULL,
   )
 }
 
-#' Shiny bindings for a gig_features plot
+#' Shiny bindings for geom_features()
 #'
-#' The widget's registered class remains `gig_point` (unchanged JS binding
-#' name)
+#' Output and render functions for using a `gig() + geom_features()` plot
+#' within Shiny applications and interactive R Markdown documents.
 #'
-#' @param outputId output variable to read from
-#' @param width,height Must be a valid CSS unit or a number
-#' @param expr An expression that generates a `gig() + geom_features()` widget
-#' @param env The environment in which to evaluate `expr`
-#' @param quoted Is `expr` a quoted expression?
+#' @param outputId Output variable to read from.
+#' @param width,height A valid CSS unit (such as `"100%"` or `"400px"`) or a
+#'   number, which is coerced to a string and has `"px"` appended.
+#' @param expr An expression that generates a `gig() + geom_features()` plot.
+#' @param env The environment in which to evaluate `expr`.
+#' @param quoted Is `expr` a quoted expression (with [quote()])?
+#'
+#' @return `geom_featuresOutput()` returns a Shiny output element and
+#'   `renderGeomFeatures()` returns a Shiny render function.
 #'
 #' @name geom_features-shiny
 #' @export

@@ -1,19 +1,34 @@
 #' STL decomposition layer
 #'
+#' Draws the observed series together with its trend, seasonal and remainder
+#' components from an STL decomposition. The `trend`, `seasonality` and
+#' `remainder` aesthetics must be mapped explicitly in [gig_aes()].
 #'
-#' @param mapping Mapping
-#' @param scaled For scaled data
-#' @param width,height Optional explicit widget size (any valid CSS unit).
+#' @param mapping Optional layer-level [gig_aes()] that overrides the plot
+#'   mapping.
+#' @param scaled Optional table of STL components computed from standardised
+#'   series, with the same columns as the plot data. When supplied, the
+#'   toolbar can switch between the original and the standardised scale.
+#' @param width,height Optional widget size (any valid CSS unit).
 #' @param elementId Optional element id.
 #'
 #' @return A `gig_layer`.
 #'
-#' @examples
-#' \dontrun{
-#' gig(stl_cmp, gig_aes(x = Quarter, y = Trips, season = season_year)) +
+#' @examplesIf requireNamespace("feasts", quietly = TRUE)
+#' library(fabletools)
+#' library(feasts)
+#'
+#' tas_tourism <- aus_tourism[aus_tourism$State == "Tasmania", ]
+#' tas_stl <- tas_tourism |>
+#'   aggregate_key((State / Region) * Purpose, Trips = sum(Trips)) |>
+#'   model(stl = STL(Trips)) |>
+#'   components()
+#'
+#' gig(tas_stl,
+#'     gig_aes(x = Quarter, y = Trips, trend = trend,
+#'             seasonality = season_year, remainder = remainder)) +
 #'   geom_stl() +
 #'   hierarchy((State / Region) * Purpose)
-#' }
 #'
 #' @seealso [gig()]
 #' @export
@@ -28,13 +43,16 @@ geom_stl <- function(mapping = NULL, scaled = NULL,
   )
 }
 
-#' Shiny bindings for a gig_stl plot
+#' Shiny bindings for geom_stl()
 #'
-#' @param outputId output variable to read from
-#' @param width,height Must be a valid CSS unit or a number
-#' @param expr An expression that generates a `gig() + geom_stl()` widget
-#' @param env The environment in which to evaluate `expr`
-#' @param quoted Is `expr` a quoted expression?
+#' Output and render functions for using a `gig() + geom_stl()` plot within
+#' Shiny applications and interactive R Markdown documents.
+#'
+#' @inheritParams geom_features-shiny
+#' @param expr An expression that generates a `gig() + geom_stl()` plot.
+#'
+#' @return `geom_stlOutput()` returns a Shiny output element and
+#'   `renderGeomStl()` returns a Shiny render function.
 #'
 #' @name geom_stl-shiny
 #' @export

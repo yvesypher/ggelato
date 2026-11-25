@@ -1,22 +1,30 @@
 #' Sunburst layer
 #'
-#' Draws the hierarchical structure as a sunburst
+#' Draws the aggregation structure as a sunburst, in which each ring is one
+#' level of the hierarchy. The data should contain the aggregated series as
+#' well as the bottom-level series, as returned by
+#' [fabletools::aggregate_key()] or by [fabletools::features()] applied to its
+#' result. A sunburst requires an aggregation structure, supplied through
+#' `gig(structure = )` or `+ hierarchy()`.
 #'
-#' @param mapping Optional layer-level [gig_aes()] overriding the plot
-#'   mapping. Not currently read by the renderer.
-#' @param labels Show segment labels initially (default `TRUE`). Can be
-#'   toggled from the toolbar.
-#' @param width,height Optional explicit widget size (any valid CSS unit).
+#' @param mapping Optional layer-level [gig_aes()]. Accepted for consistency
+#'   with the other layers; the sunburst does not use any aesthetic.
+#' @param labels Show segment labels initially (default `TRUE`). Labels can
+#'   also be toggled from the toolbar.
+#' @param width,height Optional widget size (any valid CSS unit).
 #' @param elementId Optional element id.
 #'
 #' @return A `gig_layer`.
 #'
-#' @examples
-#' \dontrun{
-#' gig(tourism_tbl) +
+#' @examplesIf requireNamespace("fabletools", quietly = TRUE)
+#' tas_hts <- fabletools::aggregate_key(
+#'   aus_tourism[aus_tourism$State == "Tasmania", ],
+#'   (State / Region) * Purpose, Trips = sum(Trips)
+#' )
+#'
+#' gig(tas_hts) +
 #'   geom_sunburst() +
 #'   hierarchy((State / Region) * Purpose)
-#' }
 #'
 #' @seealso [gig()]
 #' @export
@@ -32,13 +40,16 @@ geom_sunburst <- function(mapping = NULL, labels = TRUE,
   )
 }
 
-#' Shiny bindings for a gig_sunburst plot
+#' Shiny bindings for geom_sunburst()
 #'
-#' @param outputId output variable to read from
-#' @param width,height Must be a valid CSS unit or a number
-#' @param expr An expression that generates a `gig() + geom_sunburst()` widget
-#' @param env The environment in which to evaluate `expr`
-#' @param quoted Is `expr` a quoted expression?
+#' Output and render functions for using a `gig() + geom_sunburst()` plot
+#' within Shiny applications and interactive R Markdown documents.
+#'
+#' @inheritParams geom_features-shiny
+#' @param expr An expression that generates a `gig() + geom_sunburst()` plot.
+#'
+#' @return `geom_sunburstOutput()` returns a Shiny output element and
+#'   `renderGeomSunburst()` returns a Shiny render function.
 #'
 #' @name geom_sunburst-shiny
 #' @export

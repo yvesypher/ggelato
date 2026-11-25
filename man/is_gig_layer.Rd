@@ -15,3 +15,6 @@ is_gig_layer(x)
 \description{
 Is this object a gig layer?
 }
+\examples{
+is_gig_layer(geom_sunburst())
+}

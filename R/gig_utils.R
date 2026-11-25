@@ -12,44 +12,18 @@ prep_gig_data <- function(data) {
   data
 }
 
-resolve_gig_time_column <- function(data, time = NULL, x = NULL) {
-  if (!is.null(time) && !is.null(x)) {
-    stop("Supply only one of `time` or `x`.", call. = FALSE)
-  }
-  requested <- time %||% x
+resolve_gig_time_column <- function(data, time = NULL) {
   column_names <- names(data)
 
-  if (!is.null(requested)) {
-    if (!is.character(requested) || length(requested) != 1L ||
-        is.na(requested) || !nzchar(requested)) {
-      stop("`time` (or its `x` alias) must be one column name.", call. = FALSE)
+  if (!is.null(time)) {
+    if (!time %in% column_names) {
+      stop("Time column `", time, "` was not found in `data`.", call. = FALSE)
     }
-    if (!requested %in% column_names) {
-      stop("Time column `", requested, "` was not found in `data`.",
-           call. = FALSE)
-    }
-    return(requested)
+    return(time)
   }
 
-  if (inherits(data, "tbl_ts") && requireNamespace("tsibble", quietly = TRUE)) {
-    index_name <- tryCatch(tsibble::index_var(data), error = function(...) NULL)
-    if (is.character(index_name) && length(index_name) == 1L &&
-        index_name %in% column_names) {
-      return(index_name)
-    }
-  }
-
-  temporal_classes <- c(
-    "Date", "POSIXct", "POSIXlt", "yearquarter", "yearmonth", "yearweek",
-    "yearmon", "yearqtr", "hms", "nanotime"
-  )
-  class_matches <- column_names[vapply(data, function(column) {
-    any(vapply(
-      temporal_classes,
-      function(class_name) inherits(column, class_name),
-      logical(1)
-    ))
-  }, logical(1))]
+  class_matches <- column_names[vapply(data, inherits, logical(1),
+                                       what = gig_temporal_classes)]
   if (length(class_matches)) return(class_matches[[1L]])
 
   conventional_names <- c(
@@ -70,12 +44,14 @@ resolve_gig_time_column <- function(data, time = NULL, x = NULL) {
   )
 }
 
+gig_temporal_classes <- c(
+  "Date", "POSIXt", "yearquarter", "yearmonth", "yearweek",
+  "yearmon", "yearqtr", "hms", "nanotime"
+)
+
 gig_time_order <- function(column) {
   ordered_class <- is.numeric(column) || is.factor(column) ||
-    inherits(column, c(
-      "Date", "POSIXt", "yearquarter", "yearmonth", "yearweek",
-      "yearmon", "yearqtr", "hms", "nanotime"
-    ))
+    inherits(column, gig_temporal_classes)
   if (!ordered_class) return(rep(NA_real_, length(column)))
   transformed <- tryCatch(xtfrm(column), error = function(...) NULL)
   if (is.null(transformed)) return(rep(NA_real_, length(column)))

@@ -1,32 +1,25 @@
 #' Aesthetic mappings for gig plots
 #'
-#' Describes how columns in `data` map to the visual channels used by the
-#' `geom_*()` layers - `x`/`y` for [geom_features()], `time`/`value`/
-#' `seasonality` for [geom_stl()] - giving every layer one shared mapping
-#' vocabulary instead of a separate set of string arguments each.
+#' Describes how columns of the plot data map to the visual channels of the
+#' `geom_*()` layers, so that every layer shares one mapping vocabulary.
+#' Aesthetics are given as bare column names or expressions, as in
+#' `ggplot2::aes()`. Aesthetics left as `NULL` are dropped.
 #'
-#' Aesthetics left as `NULL` are dropped, exactly as
-#' [ggplot2::aes()] drops arguments the caller did not supply.
+#' @param x,y The two primary variables. [geom_features()] reads them as the
+#'   initial feature columns on the horizontal and vertical axes.
+#'   [geom_stl()] reads `x` as the time index and `y` as the observed series.
+#' @param trend,seasonality,remainder STL component columns, required by
+#'   [geom_stl()]. They are never guessed from column names.
+#' @param colour,group Reserved for future use. They are stored on the
+#'   mapping but not yet used by any layer.
+#' @param ... Further aesthetics, stored but not interpreted.
 #'
-#' @param x,y The two primary variables a mark reads. [geom_features()]
-#'   treats these as numeric feature columns; [geom_stl()] treats them as
-#'   the time/index column and the response column respectively. Each mark
-#'   interprets `x`/`y` according to its own diagnostic purpose, the same
-#'   way ggplot2 geoms each interpret `aes(x, y)` differently.
-#' @param trend,seasonality,remainder Required STL component columns for
-#'   [geom_stl()]. Unlike other channels, these are not guessed from column
-#'   names - [geom_stl()] refuses to build without all three explicitly
-#'   mapped, e.g. `gig_aes(trend = trend, seasonality = season_year,
-#'   remainder = remainder)`.
-#' @param colour,group Reserved grouping aesthetics. Accepted and carried
-#'   on the object, but not yet consumed by any renderer.
-#' @param ... Further aesthetics, captured but not interpreted.
-#'
-#' @return An object of class `gig_aes`: a named list of quosures.
+#' @return An object of class `gig_aes`, a named list of quosures.
 #'
 #' @examples
 #' gig_aes(x = trend_strength, y = seasonal_strength_year)
-#' gig_aes(x = Quarter, y = Trips, seasonality = season_year)
+#' gig_aes(x = Quarter, y = Trips, trend = trend,
+#'         seasonality = season_year, remainder = remainder)
 #'
 #' @seealso [gig()], [geom_features()], [geom_stl()]
 #' @export
@@ -63,6 +56,8 @@ print.gig_aes <- function(x, ...) {
 #'
 #' @param x An object.
 #' @return `TRUE` or `FALSE`.
+#' @examples
+#' is_gig_aes(gig_aes(x = Trips))
 #' @export
 is_gig_aes <- function(x) inherits(x, "gig_aes")
 

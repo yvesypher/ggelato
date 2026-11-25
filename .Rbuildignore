@@ -14,3 +14,9 @@
 ^structure\.md$
 ^vignettes/\.quarto$
 ^vignettes/*_files$
+^data-raw$
+^vignettes/articles$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

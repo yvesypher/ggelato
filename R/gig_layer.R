@@ -14,6 +14,8 @@ new_gig_layer <- function(geom, mapping = NULL, params = list()) {
 #'
 #' @param x An object.
 #' @return `TRUE` or `FALSE`.
+#' @examples
+#' is_gig_layer(geom_sunburst())
 #' @export
 is_gig_layer <- function(x) inherits(x, "gig_layer")
 

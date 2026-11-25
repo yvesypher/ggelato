@@ -9,7 +9,7 @@
 \arguments{
 \item{e1}{A \code{gig} plot.}
 
-\item{e2}{A \code{gig_layer}, \code{gig_hierarchy}, \code{gig_aes} or \code{gig_theme}.}
+\item{e2}{A \code{gig_layer}, \code{gig_hierarchy} or \code{gig_aes}, or a list of these.}
 }
 \value{
 The updated \code{gig} plot.

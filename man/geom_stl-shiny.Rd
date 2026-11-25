@@ -4,23 +4,29 @@
 \alias{geom_stl-shiny}
 \alias{geom_stlOutput}
 \alias{renderGeomStl}
-\title{Shiny bindings for a gig_stl plot}
+\title{Shiny bindings for geom_stl()}
 \usage{
 geom_stlOutput(outputId, width = "100\%", height = "400px")
 
 renderGeomStl(expr, env = parent.frame(), quoted = FALSE)
 }
 \arguments{
-\item{outputId}{output variable to read from}
+\item{outputId}{Output variable to read from.}
 
-\item{width, height}{Must be a valid CSS unit or a number}
+\item{width, height}{A valid CSS unit (such as \code{"100\%"} or \code{"400px"}) or a
+number, which is coerced to a string and has \code{"px"} appended.}
 
-\item{expr}{An expression that generates a \code{gig() + geom_stl()} widget}
+\item{expr}{An expression that generates a \code{gig() + geom_stl()} plot.}
 
-\item{env}{The environment in which to evaluate \code{expr}}
+\item{env}{The environment in which to evaluate \code{expr}.}
 
-\item{quoted}{Is \code{expr} a quoted expression?}
+\item{quoted}{Is \code{expr} a quoted expression (with \code{\link[=quote]{quote()}})?}
+}
+\value{
+\code{geom_stlOutput()} returns a Shiny output element and
+\code{renderGeomStl()} returns a Shiny render function.
 }
 \description{
-Shiny bindings for a gig_stl plot
+Output and render functions for using a \code{gig() + geom_stl()} plot within
+Shiny applications and interactive R Markdown documents.
 }

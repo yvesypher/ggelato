@@ -1,32 +1,26 @@
-#' A reusable hierarchical structure specification
+#' Aggregation structure of a hierarchical or grouped time series
 #'
-#' Wraps a fabletools-style structure string such as
-#' `"(State/Region)*Purpose"` in a first-class object that can be added to
-#' any [gig()] plot with `+`. `/` declares a nesting constraint
-#' (parent/child), `*` crosses independent groups.
+#' Wraps an aggregation structure, written as in
+#' [fabletools::aggregate_key()], in an object that can be added to any
+#' [gig()] plot with `+`. The operator `/` denotes nesting (parent / child)
+#' and `*` denotes crossing of independent groupings. A single `hierarchy()`
+#' object can be shared by several plots of the same data.
 #'
-#' Building it once means one parser, one validation, and one object that
-#' can be shared across several `geom_features()`/`geom_stl()`/
-#' `geom_sunburst()` plots of the same key structure - the hierarchical
-#' analogue of reusing a facet specification.
-#'
-#' @param structure The structure. Either a string,
-#'   `hierarchy("(State/Region)*Purpose")`, a bare expression,
-#'   `hierarchy((State / Region) * Purpose)`, or a variable holding a
-#'   string. All three normalise to the same string.
+#' @param structure The aggregation structure, either as a bare expression,
+#'   `(State / Region) * Purpose`, or as a string,
+#'   `"(State/Region)*Purpose"`. A variable holding such a string is also
+#'   accepted.
 #'
 #' @return An object of class `gig_hierarchy`.
 #'
 #' @examples
-#' hierarchy("(State/Region)*Purpose")
 #' hierarchy((State / Region) * Purpose)
+#' hierarchy("(State/Region)*Purpose")
 #'
-#' # Built once, reused across plots of the same key structure:
-#' h <- hierarchy((State / Region) * Purpose)
-#' \dontrun{
-#' gig(stl_cmp, gig_aes(x = Quarter, y = Trips)) + geom_stl() + h
-#' gig(tourism_tbl) + geom_sunburst() + h
-#' }
+#' # One structure object can be added to several plots
+#' tourism_structure <- hierarchy((State / Region) * Purpose)
+#' plot_spec <- gig(aus_tourism) + geom_sunburst() + tourism_structure
+#' plot_spec$hierarchy
 #'
 #' @seealso [gig()]
 #' @export
@@ -71,15 +65,20 @@ print.gig_hierarchy <- function(x, ...) {
 #'
 #' @param x An object.
 #' @return `TRUE` or `FALSE`.
+#' @examples
+#' is_gig_hierarchy(hierarchy(State / Region))
 #' @export
 is_gig_hierarchy <- function(x) inherits(x, "gig_hierarchy")
 
-#' Change a structure string or gig_hierarchy to a gig_hierarchy
+#' Coerce a structure string to a gig_hierarchy
 #'
-#' Lets callers (including `fridge::fridge()`) accept either form.
+#' Allows functions, including `fridge::fridge()`, to accept either a string
+#' or a [hierarchy()] object.
 #'
 #' @param x A string or a `gig_hierarchy`.
 #' @return A `gig_hierarchy`, or `NULL` if `x` is `NULL`.
+#' @examples
+#' as_gig_hierarchy("(State/Region)*Purpose")
 #' @export
 as_gig_hierarchy <- function(x) {
   if (is.null(x)) return(NULL)

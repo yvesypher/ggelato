@@ -4,14 +4,7 @@
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 ggelato_package_version <- function() {
-  tryCatch(
-    as.character(utils::packageVersion("ggelato")),
-    error = function(...) "0.0.0"
-  )
-}
-
-ggelato_hierarchy_asset_version <- function() {
-  ggelato_package_version()
+  as.character(utils::packageVersion("ggelato"))
 }
 
 #' Plot sizing policy shared by the native gig_* widgets
@@ -238,8 +231,7 @@ hierarchy_detect_time_labels <- function(plot) {
     value <- deparse(value[[2]])
   } else if (is.name(value) || is.call(value)) {
     value <- deparse(value)
-  } else if (inherits(value, "quosure") &&
-             requireNamespace("rlang", quietly = TRUE)) {
+  } else if (inherits(value, "quosure")) {
     value <- rlang::as_label(value)
   } else {
     return(NULL)
@@ -448,7 +440,7 @@ hierarchy_prepare_highchart <- function(plot, structure, time_labels) {
 ggelato_hierarchy_core_dependency <- function() {
   htmltools::htmlDependency(
     name = "ggelato-hierarchy-core",
-    version = ggelato_hierarchy_asset_version(),
+    version = ggelato_package_version(),
     package = "ggelato",
     src = "htmlwidgets",
     stylesheet = "assets/css/hierarchy-core.css",
@@ -461,7 +453,7 @@ ggelato_hierarchy_core_dependency <- function() {
 ggelato_hierarchy_addon_dependency <- function(name, stylesheet = NULL) {
   arguments <- list(
     name = name,
-    version = ggelato_hierarchy_asset_version(),
+    version = ggelato_package_version(),
     package = "ggelato",
     src = "htmlwidgets",
     script = paste0(name, ".js"),

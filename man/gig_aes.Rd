@@ -16,38 +16,31 @@ gig_aes(
 )
 }
 \arguments{
-\item{x, y}{The two primary variables a mark reads. \code{\link[=geom_features]{geom_features()}}
-treats these as numeric feature columns; \code{\link[=geom_stl]{geom_stl()}} treats them as
-the time/index column and the response column respectively. Each mark
-interprets \code{x}/\code{y} according to its own diagnostic purpose, the same
-way ggplot2 geoms each interpret \code{aes(x, y)} differently.}
+\item{x, y}{The two primary variables. \code{\link[=geom_features]{geom_features()}} reads them as the
+initial feature columns on the horizontal and vertical axes.
+\code{\link[=geom_stl]{geom_stl()}} reads \code{x} as the time index and \code{y} as the observed series.}
 
-\item{trend, seasonality, remainder}{Required STL component columns for
-\code{\link[=geom_stl]{geom_stl()}}. Unlike other channels, these are not guessed from column
-names - \code{\link[=geom_stl]{geom_stl()}} refuses to build without all three explicitly
-mapped, e.g. \code{gig_aes(trend = trend, seasonality = season_year, remainder = remainder)}.}
+\item{trend, seasonality, remainder}{STL component columns, required by
+\code{\link[=geom_stl]{geom_stl()}}. They are never guessed from column names.}
 
-\item{colour, group}{Reserved grouping aesthetics. Accepted and carried
-on the object, but not yet consumed by any renderer.}
+\item{colour, group}{Reserved for future use. They are stored on the
+mapping but not yet used by any layer.}
 
-\item{...}{Further aesthetics, captured but not interpreted.}
+\item{...}{Further aesthetics, stored but not interpreted.}
 }
 \value{
-An object of class \code{gig_aes}: a named list of quosures.
+An object of class \code{gig_aes}, a named list of quosures.
 }
 \description{
-Describes how columns in \code{data} map to the visual channels used by the
-\verb{geom_*()} layers - \code{x}/\code{y} for \code{\link[=geom_features]{geom_features()}}, \code{time}/\code{value}/
-\code{seasonality} for \code{\link[=geom_stl]{geom_stl()}} - giving every layer one shared mapping
-vocabulary instead of a separate set of string arguments each.
-}
-\details{
-Aesthetics left as \code{NULL} are dropped, exactly as
-\code{\link[ggplot2:aes]{ggplot2::aes()}} drops arguments the caller did not supply.
+Describes how columns of the plot data map to the visual channels of the
+\verb{geom_*()} layers, so that every layer shares one mapping vocabulary.
+Aesthetics are given as bare column names or expressions, as in
+\code{ggplot2::aes()}. Aesthetics left as \code{NULL} are dropped.
 }
 \examples{
 gig_aes(x = trend_strength, y = seasonal_strength_year)
-gig_aes(x = Quarter, y = Trips, seasonality = season_year)
+gig_aes(x = Quarter, y = Trips, trend = trend,
+        seasonality = season_year, remainder = remainder)
 
 }
 \seealso{

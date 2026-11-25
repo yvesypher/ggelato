@@ -2,7 +2,7 @@
 % Please edit documentation in R/hierarchy.R
 \name{as_gig_hierarchy}
 \alias{as_gig_hierarchy}
-\title{Change a structure string or gig_hierarchy to a gig_hierarchy}
+\title{Coerce a structure string to a gig_hierarchy}
 \usage{
 as_gig_hierarchy(x)
 }
@@ -13,5 +13,9 @@ as_gig_hierarchy(x)
 A \code{gig_hierarchy}, or \code{NULL} if \code{x} is \code{NULL}.
 }
 \description{
-Lets callers (including \code{fridge::fridge()}) accept either form.
+Allows functions, including \code{fridge::fridge()}, to accept either a string
+or a \code{\link[=hierarchy]{hierarchy()}} object.
+}
+\examples{
+as_gig_hierarchy("(State/Region)*Purpose")
 }

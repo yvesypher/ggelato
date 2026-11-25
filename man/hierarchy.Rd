@@ -2,41 +2,34 @@
 % Please edit documentation in R/hierarchy.R
 \name{hierarchy}
 \alias{hierarchy}
-\title{A reusable hierarchical structure specification}
+\title{Aggregation structure of a hierarchical or grouped time series}
 \usage{
 hierarchy(structure)
 }
 \arguments{
-\item{structure}{The structure. Either a string,
-\code{hierarchy("(State/Region)*Purpose")}, a bare expression,
-\code{hierarchy((State / Region) * Purpose)}, or a variable holding a
-string. All three normalise to the same string.}
+\item{structure}{The aggregation structure, either as a bare expression,
+\code{(State / Region) * Purpose}, or as a string,
+\code{"(State/Region)*Purpose"}. A variable holding such a string is also
+accepted.}
 }
 \value{
 An object of class \code{gig_hierarchy}.
 }
 \description{
-Wraps a fabletools-style structure string such as
-\code{"(State/Region)*Purpose"} in a first-class object that can be added to
-any \code{\link[=gig]{gig()}} plot with \code{+}. \code{/} declares a nesting constraint
-(parent/child), \code{*} crosses independent groups.
-}
-\details{
-Building it once means one parser, one validation, and one object that
-can be shared across several \code{geom_features()}/\code{geom_stl()}/
-\code{geom_sunburst()} plots of the same key structure - the hierarchical
-analogue of reusing a facet specification.
+Wraps an aggregation structure, written as in
+\code{\link[fabletools:aggregate_key]{fabletools::aggregate_key()}}, in an object that can be added to any
+\code{\link[=gig]{gig()}} plot with \code{+}. The operator \code{/} denotes nesting (parent / child)
+and \code{*} denotes crossing of independent groupings. A single \code{hierarchy()}
+object can be shared by several plots of the same data.
 }
 \examples{
-hierarchy("(State/Region)*Purpose")
 hierarchy((State / Region) * Purpose)
+hierarchy("(State/Region)*Purpose")
 
-# Built once, reused across plots of the same key structure:
-h <- hierarchy((State / Region) * Purpose)
-\dontrun{
-gig(stl_cmp, gig_aes(x = Quarter, y = Trips)) + geom_stl() + h
-gig(tourism_tbl) + geom_sunburst() + h
-}
+# One structure object can be added to several plots
+tourism_structure <- hierarchy((State / Region) * Purpose)
+plot_spec <- gig(aus_tourism) + geom_sunburst() + tourism_structure
+plot_spec$hierarchy
 
 }
 \seealso{

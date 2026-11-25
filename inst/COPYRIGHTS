@@ -1,0 +1,16 @@
+The ggelato package bundles the following third-party JavaScript libraries
+in inst/htmlwidgets. Each is distributed under its own licence.
+
+D3.js 7.9.0 (inst/htmlwidgets/d3/d3.min.js)
+  Copyright 2010-2023 Mike Bostock
+  ISC License
+  https://github.com/d3/d3
+
+Chart.js 4.4.1 (inst/htmlwidgets/chartjs/chart.min.js)
+  Copyright 2014-2023 Chart.js Contributors
+  MIT License
+  https://github.com/chartjs/Chart.js
+
+The remaining JavaScript files in inst/htmlwidgets are compiled with webpack
+from the unminified sources in the srcjs directory of the package repository,
+https://github.com/yvesypher/ggelato.

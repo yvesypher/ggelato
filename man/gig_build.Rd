@@ -10,20 +10,27 @@ gig_build(x)
 \item{x}{A \code{gig} plot specification.}
 }
 \value{
-An htmlwidget (\code{gig_point}, \code{gig_stldp} or \code{gig_sunburst}).
+An htmlwidget of class \code{gig_point}, \code{gig_stldp} or \code{gig_sunburst},
+depending on the geom layer.
 }
 \description{
-Build a gig plot into an htmlwidget
+Printing a \code{gig} plot builds it automatically. Call \code{gig_build()} directly
+to obtain the htmlwidget, for example to save it with
+\code{\link[htmlwidgets:saveWidget]{htmlwidgets::saveWidget()}} or to pass it to another function that expects
+an htmlwidget.
 }
 \examples{
-\dontrun{
-spec <- gig(tourism_ft, gig_aes(x = trend_strength, y = spectral_entropy)) +
-  geom_features() +
-  hierarchy((State / Region) * Purpose)
+\dontshow{if (requireNamespace("fabletools", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+tas_hts <- fabletools::aggregate_key(
+  aus_tourism[aus_tourism$State == "Tasmania", ],
+  (State / Region) * Purpose, Trips = sum(Trips)
+)
 
-widget <- gig_build(spec)
-}
-
+plot_spec <- gig(tas_hts, structure = (State / Region) * Purpose) +
+  geom_sunburst()
+widget <- gig_build(plot_spec)
+class(widget)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=gig]{gig()}}

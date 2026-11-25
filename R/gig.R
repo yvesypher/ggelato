@@ -1,40 +1,44 @@
 #' Create a gig plot specification
 #'
-#' * a `geom_*()` layer - [geom_features()], [geom_stl()],
-#'   [geom_sunburst()]
-#' * a [hierarchy()] specification, if not already supplied via
-#'   `structure` below
-#' * a [gig_aes()] mapping, merged into the plot mapping
-#' * a [theme_gig()]
+#' `gig()` starts a plot of a hierarchical or grouped time series. It holds the
+#' data, the default aesthetic mapping and, optionally, the aggregation
+#' structure. Components are then added with `+`:
 #'
-#' @param data A data frame. For [geom_features()] one row per series
-#'   (hierarchy key columns plus numeric feature columns); for
-#'   [geom_stl()] an STL components table; for
-#'   [geom_sunburst()] any table carrying the hierarchy key columns.
+#' * one `geom_*()` layer, [geom_features()], [geom_stl()] or
+#'   [geom_sunburst()];
+#' * a [hierarchy()] specification, if it was not supplied through
+#'   `structure`;
+#' * a [gig_aes()] mapping, which is merged into the plot mapping.
+#'
+#' The plot is drawn when it is printed. Use [gig_build()] to obtain the
+#' underlying htmlwidget, for example to save it with
+#' [htmlwidgets::saveWidget()].
+#'
+#' @param data A data frame. For [geom_features()], one row per series
+#'   containing the key columns and numeric feature columns. For
+#'   [geom_stl()], a table of STL components. For [geom_sunburst()], any
+#'   table containing the key columns.
 #' @param mapping A [gig_aes()] mapping. Layers may override it.
-#' @param structure Optional hierarchy structure, written directly rather
-#'   than wrapped in [hierarchy()]: a bare algebra expression,
-#'   `(State / Region) * Purpose`, a string,
-#'   `"(State/Region)*Purpose"`, or an existing `hierarchy()` object.
-#'   Equivalent to (and overridden by) adding `+ hierarchy(...)`
-#'   afterwards.
+#' @param structure Optional aggregation structure. Either a bare expression
+#'   such as `(State / Region) * Purpose`, a string such as
+#'   `"(State/Region)*Purpose"`, or a [hierarchy()] object. Adding
+#'   `+ hierarchy(...)` afterwards overrides it.
 #'
 #' @return An object of class `gig`.
 #'
-#' @examples
-#' \dontrun{
+#' @examplesIf requireNamespace("feasts", quietly = TRUE)
 #' library(fabletools)
 #' library(feasts)
-#' library(tsibble)
 #'
-#' tourism_ft <- tourism |>
+#' tas_tourism <- aus_tourism[aus_tourism$State == "Tasmania", ]
+#' tas_features <- tas_tourism |>
 #'   aggregate_key((State / Region) * Purpose, Trips = sum(Trips)) |>
-#'   features(Trips, feature_set(pkgs = "feasts"))
+#'   features(Trips, feat_stl)
 #'
-#' gig(tourism_ft, gig_aes(x = trend_strength, y = seasonal_strength_year),
+#' gig(tas_features,
+#'     gig_aes(x = trend_strength, y = seasonal_strength_year),
 #'     structure = (State / Region) * Purpose) +
 #'   geom_features()
-#' }
 #'
 #' @seealso [gig_aes()], [hierarchy()], [gig_build()]
 #' @export
@@ -42,7 +46,7 @@ gig <- function(data, mapping = gig_aes(), structure = NULL) {
   if (missing(data) || is.null(data)) {
     stop("`data` is required.", call. = FALSE)
   }
-  if (!is.data.frame(data) && !inherits(data, "tbl")) {
+  if (!is.data.frame(data)) {
     data <- tryCatch(
       as.data.frame(data),
       error = function(...) {
@@ -66,8 +70,7 @@ gig <- function(data, mapping = gig_aes(), structure = NULL) {
       data = data,
       mapping = mapping,
       layers = list(),
-      hierarchy = initial_hierarchy,
-      theme = NULL
+      hierarchy = initial_hierarchy
     ),
     class = "gig"
   )
@@ -77,13 +80,15 @@ gig <- function(data, mapping = gig_aes(), structure = NULL) {
 #'
 #' @param x An object.
 #' @return `TRUE` or `FALSE`.
+#' @examples
+#' is_gig(gig(aus_tourism))
 #' @export
 is_gig <- function(x) inherits(x, "gig")
 
 #' Add a component to a gig plot
 #'
 #' @param e1 A `gig` plot.
-#' @param e2 A `gig_layer`, `gig_hierarchy`, `gig_aes` or `gig_theme`.
+#' @param e2 A `gig_layer`, `gig_hierarchy` or `gig_aes`, or a list of these.
 #' @return The updated `gig` plot.
 #' @export
 "+.gig" <- function(e1, e2) {
@@ -95,22 +100,19 @@ is_gig <- function(x) inherits(x, "gig")
     e1$layers <- c(e1$layers, list(e2))
   } else if (is_gig_hierarchy(e2)) {
     e1$hierarchy <- e2
-  } else if (is_gig_theme(e2)) {
-    e1$theme <- merge_gig_theme(e1$theme, e2)
   } else if (is_gig_aes(e2)) {
     e1$mapping <- merge_gig_aes(e1$mapping, e2)
   } else if (is.list(e2) && !is.data.frame(e2) &&
              all(vapply(e2, function(item) {
-               is_gig_layer(item) || is_gig_hierarchy(item) ||
-                 is_gig_theme(item) || is_gig_aes(item)
+               is_gig_layer(item) || is_gig_hierarchy(item) || is_gig_aes(item)
              }, logical(1)))) {
     # A list of components, so `p + list(geom_features(), h)` works.
     for (item in e2) e1 <- e1 + item
   } else {
     stop(
       "Don't know how to add a <", class(e2)[[1L]], "> to a <gig> plot. ",
-      "Expected geom_features()/geom_stl()/geom_sunburst(), hierarchy(), ",
-      "gig_aes() or theme_gig().",
+      "Expected geom_features()/geom_stl()/geom_sunburst(), hierarchy() ",
+      "or gig_aes().",
       call. = FALSE
     )
   }
@@ -136,17 +138,25 @@ knit_print.gig <- function(x, ...) {
 
 #' Build a gig plot into an htmlwidget
 #'
+#' Printing a `gig` plot builds it automatically. Call `gig_build()` directly
+#' to obtain the htmlwidget, for example to save it with
+#' [htmlwidgets::saveWidget()] or to pass it to another function that expects
+#' an htmlwidget.
+#'
 #' @param x A `gig` plot specification.
-#' @return An htmlwidget (`gig_point`, `gig_stldp` or `gig_sunburst`).
+#' @return An htmlwidget of class `gig_point`, `gig_stldp` or `gig_sunburst`,
+#'   depending on the geom layer.
 #'
-#' @examples
-#' \dontrun{
-#' spec <- gig(tourism_ft, gig_aes(x = trend_strength, y = spectral_entropy)) +
-#'   geom_features() +
-#'   hierarchy((State / Region) * Purpose)
+#' @examplesIf requireNamespace("fabletools", quietly = TRUE)
+#' tas_hts <- fabletools::aggregate_key(
+#'   aus_tourism[aus_tourism$State == "Tasmania", ],
+#'   (State / Region) * Purpose, Trips = sum(Trips)
+#' )
 #'
-#' widget <- gig_build(spec)
-#' }
+#' plot_spec <- gig(tas_hts, structure = (State / Region) * Purpose) +
+#'   geom_sunburst()
+#' widget <- gig_build(plot_spec)
+#' class(widget)
 #'
 #' @seealso [gig()]
 #' @export
@@ -197,8 +207,7 @@ build_gig_features <- function(x, layer, structure_string) {
     data = prep_gig_data(resolved$data),
     structure = structure_string,
     xvar = resolved$columns$x,
-    yvar = resolved$columns$y,
-    theme = gig_theme_payload(x$theme)
+    yvar = resolved$columns$y
   )
 
   create_gig_widget(
@@ -210,7 +219,7 @@ build_gig_features <- function(x, layer, structure_string) {
   )
 }
 
-# --- stl ---
+# --- stl ---------------------------------------------------------------------
 
 build_gig_stl <- function(x, layer, structure_string) {
   resolved <- gig_layer_columns(x, layer)
@@ -249,8 +258,7 @@ build_gig_stl <- function(x, layer, structure_string) {
     season = columns$seasonality,
     trend = columns$trend,
     remainder = columns$remainder,
-    time = time_column,
-    theme = gig_theme_payload(x$theme)
+    time = time_column
   )
 
   create_gig_widget(
@@ -267,11 +275,7 @@ build_gig_stl <- function(x, layer, structure_string) {
 build_gig_sunburst <- function(x, layer, structure_string) {
   if (is.null(structure_string) || !nzchar(structure_string)) {
     stop(
-      "geom_sunburst() requires a hierarchy structure. Unlike geom_features() ",
-      "or geom_stl(), a sunburst's entire content *is* the hierarchy ",
-      "partition - without a declared structure there is nothing to draw ",
-      "that wasn't guessed, so this refuses rather than falling back to the ",
-      "aggregated-row-count inference used elsewhere. Supply it with ",
+      "geom_sunburst() requires an aggregation structure. Supply it with ",
       "`gig(data, structure = ...)` or `+ hierarchy(...)`.",
       call. = FALSE
     )
@@ -282,8 +286,7 @@ build_gig_sunburst <- function(x, layer, structure_string) {
   widget_x <- list(
     data = prep_gig_data(resolved$data),
     structure = structure_string,
-    labels = isTRUE(layer$params$labels),
-    theme = gig_theme_payload(x$theme)
+    labels = isTRUE(layer$params$labels)
   )
 
   create_gig_widget(
@@ -293,9 +296,4 @@ build_gig_sunburst <- function(x, layer, structure_string) {
     height = layer$params$height,
     element_id = layer$params$elementId
   )
-}
-
-gig_theme_payload <- function(theme) {
-  if (is.null(theme) || length(theme) == 0L) return(NULL)
-  unclass(theme)
 }

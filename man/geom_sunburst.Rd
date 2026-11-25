@@ -13,13 +13,13 @@ geom_sunburst(
 )
 }
 \arguments{
-\item{mapping}{Optional layer-level \code{\link[=gig_aes]{gig_aes()}} overriding the plot
-mapping. Not currently read by the renderer.}
+\item{mapping}{Optional layer-level \code{\link[=gig_aes]{gig_aes()}}. Accepted for consistency
+with the other layers; the sunburst does not use any aesthetic.}
 
-\item{labels}{Show segment labels initially (default \code{TRUE}). Can be
-toggled from the toolbar.}
+\item{labels}{Show segment labels initially (default \code{TRUE}). Labels can
+also be toggled from the toolbar.}
 
-\item{width, height}{Optional explicit widget size (any valid CSS unit).}
+\item{width, height}{Optional widget size (any valid CSS unit).}
 
 \item{elementId}{Optional element id.}
 }
@@ -27,15 +27,24 @@ toggled from the toolbar.}
 A \code{gig_layer}.
 }
 \description{
-Draws the hierarchical structure as a sunburst
+Draws the aggregation structure as a sunburst, in which each ring is one
+level of the hierarchy. The data should contain the aggregated series as
+well as the bottom-level series, as returned by
+\code{\link[fabletools:aggregate_key]{fabletools::aggregate_key()}} or by \code{\link[fabletools:features]{fabletools::features()}} applied to its
+result. A sunburst requires an aggregation structure, supplied through
+\code{gig(structure = )} or \code{+ hierarchy()}.
 }
 \examples{
-\dontrun{
-gig(tourism_tbl) +
+\dontshow{if (requireNamespace("fabletools", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+tas_hts <- fabletools::aggregate_key(
+  aus_tourism[aus_tourism$State == "Tasmania", ],
+  (State / Region) * Purpose, Trips = sum(Trips)
+)
+
+gig(tas_hts) +
   geom_sunburst() +
   hierarchy((State / Region) * Purpose)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=gig]{gig()}}

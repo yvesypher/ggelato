@@ -1,80 +1,32 @@
 const path = require('path');
 const fs = require('fs');
 
-// defaults
-var outputPath = [],
-    entryPoints = [],
-    externals = [],
-    misc = [],
-    loaders = [];
+// Read a JSON file from srcjs/config, falling back to a default when absent.
+const readConfig = (name, fallback) => {
+  const file = path.join(__dirname, 'srcjs', 'config', name);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback;
+};
 
-var outputPathFile = './srcjs/config/output_path.json',
-    entryPointsFile = './srcjs/config/entry_points.json',
-    externalsFile = './srcjs/config/externals.json',
-    miscFile = './srcjs/config/misc.json',
-    loadersFile = './srcjs/config/loaders.json';
+const outputPath = readConfig('output_path.json', './inst/htmlwidgets');
+const entryPoints = readConfig('entry_points.json', {});
+const externals = readConfig('externals.json', {});
+const misc = readConfig('misc.json', {});
+const loaders = readConfig('loaders.json', []).map(loader => ({
+  ...loader,
+  test: RegExp(loader.test)
+}));
 
-// Read config files
-if(fs.existsSync(outputPathFile)){
-  outputPath = fs.readFileSync(outputPathFile, 'utf8');
-}
-
-if(fs.existsSync(entryPointsFile)){
-  entryPoints = fs.readFileSync(entryPointsFile, 'utf8');
-}
-
-if(fs.existsSync(externalsFile)){
-  externals = fs.readFileSync(externalsFile, 'utf8');
-}
-
-if(fs.existsSync(miscFile)){
-  misc = fs.readFileSync(miscFile, 'utf8');
-}
-
-if(fs.existsSync(loadersFile)){
-  loaders = fs.readFileSync(loadersFile, 'utf8');
-}
-
-if(fs.existsSync(loadersFile)){
-  loaders = fs.readFileSync(loadersFile, 'utf8');
-}
-
-// parse
-loaders = JSON.parse(loaders);
-misc = JSON.parse(misc);
-externals = JSON.parse(externals);
-entryPoints = JSON.parse(entryPoints);
-
-// parse regex
-loaders.forEach((loader) => {
-  loader.test = RegExp(loader.test);
-  return(loader);
-})
-
-// placeholder for plugins
-var plugins = [
-];
-
-// define options
-var options = {
+module.exports = {
   entry: entryPoints,
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, JSON.parse(outputPath)),
+    path: path.resolve(__dirname, outputPath)
   },
   externals: externals,
   module: {
     rules: loaders
   },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
-  plugins: plugins
+  resolve: misc.resolve || {
+    extensions: ['.tsx', '.ts', '.js']
+  }
 };
-
-// add misc
-if(misc.resolve)
-  options.resolve = misc.resolve;
-
-// export
-module.exports = options;

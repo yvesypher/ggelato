@@ -15,3 +15,6 @@ is_gig_hierarchy(x)
 \description{
 Is this object a gig hierarchy specification?
 }
+\examples{
+is_gig_hierarchy(hierarchy(State / Region))
+}

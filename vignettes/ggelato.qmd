@@ -5,201 +5,180 @@ vignette: >
   %\VignetteIndexEntry{A grammar for hierarchical time series graphics}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
-execute:
-  cache: false
-  freeze: false
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  message = FALSE,
-  warning = FALSE,
-  error = FALSE
-)
-```
+The ggelato package provides interactive graphics for exploring hierarchical and grouped time series. Plots are specified with a layered grammar in the style of ggplot2. A plot starts with `gig()`, which holds the data and the aesthetic mapping, and further components are added with `+`.
 
-## Introduction
+* A geom layer chooses the view. `geom_features()` draws a feature space, `geom_stl()` draws an STL decomposition and `geom_sunburst()` draws the aggregation structure.
+* `hierarchy()` declares the aggregation structure, using the same notation as `fabletools::aggregate_key()`.
+* `gig_aes()` maps columns of the data to the channels read by the geom layer.
 
-Hierarchical time series arise when a collection of series can be aggregated along one or more nested or crossed variables. Examples include national, state and regional tourism counts, which may be further disaggregated by travel purpose. Exploring such data requires views that respect the aggregation structure and that allow an analyst to move between levels of the hierarchy.
-
-The `ggelato` package provides a layered grammar of graphics for hierarchical time series, modelled on the design of `ggplot2`. A plot is created with `gig()`, which holds the data, the aesthetic mapping and the hierarchical structure, and a single geometry is then added with `+`. The `fridge` package coordinates several `ggelato` plots in one interface, so that a selection made in one view is reflected in all others.
-
-This vignette introduces the main components of the grammar using the Australian domestic tourism data and concludes by combining three plots with `fridge()`.
-
-| Component | Role |
-|:----------|:-----|
-| `gig()` | Combines the data, the mapping and the hierarchical structure |
-| `gig_aes()` | Maps variables to channels such as `x`, `y`, `trend`, `seasonality` and `remainder` |
-| `geom_features()` | Scatterplot of time series features |
-| `geom_stl()` | Time series plot with the STL decomposition |
-| `geom_sunburst()` | Sunburst display of the hierarchy |
-
-## Setup
+Every plot carries a hierarchy widget, which displays the levels of the aggregation structure. Levels can be reordered by dragging and switched on or off by clicking, and the series at a chosen level can be filtered by value. A toolbar on each plot provides box and lasso selection, several selection modes, label control and a reset button.
 
 ```{r}
-# devtools::install("../fridge") #run this in console
-library(fridge)
+#| label: setup
+#| message: false
 library(ggelato)
 library(fabletools)
 library(feasts)
 library(tsibble)
-library(dplyr)
 ```
 
 ## Data
 
-The `tourism` data in the `tsibble` package contain quarterly domestic overnight trips for Australian regions by travel purpose. The hierarchical structure is `(State/Region)*Purpose`. This means that `Region` is nested within `State`, while `Purpose` is crossed with both `State` and `Region`. The structure is imposed with `fabletools::aggregate_key()`, which adds the aggregate series at every level.
+The `aus_tourism` data contain quarterly overnight trips from 1998 Q1 to 2022 Q4 for the 76 tourism regions of Australia, disaggregated by purpose of travel. Regions are nested within states, and purpose of travel is crossed with both, which gives the grouped structure `(State / Region) * Purpose`.
+
+To keep this vignette small, the examples use the regions of Victoria and Tasmania. The series at every level of the structure are computed with `aggregate_key()`.
 
 ```{r}
-tourism_hts <- tsibble::tourism |>
+#| label: data
+south_east <- aus_tourism[aus_tourism$State %in% c("Victoria", "Tasmania"), ]
+
+tourism_hts <- south_east |>
   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+tourism_hts
 ```
 
-The same `structure` formula is passed to `gig()` in every plot below, so that `ggelato` interprets the rows of the data in the same way as the aggregation.
+The aggregated series are marked `<aggregated>` in the key columns. The result contains `r n_keys(tourism_hts)` series. These are the total, the 2 states and the 25 regions, each taken over all purposes of travel and for each of the 4 purposes separately.
 
-```{r echo = FALSE}
-# tourism_hts <- bind_rows(tsibble::tourism, tourism_new) |>
-#   mutate(
-#     Region = recode(
-#       Region,
-#       "Experience Perth" = "Destination Perth",
-#       "Launceston, Tamar and the North" = "Launceston and the North",
-#       "Wilderness West" = "West Coast",
-#       "Northern" = "Townsville",
-#       "Outback" = "Outback Queensland",
-#       "Darling Downs" = "Queensland Country",
-#       "Kakadu Arnhem" = "Litchfield Kakadu Arnhem",
-#       "Murraylands" = "Murray River, Lakes and Coorong"
-#     )
-#   ) |> aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+## Declaring the aggregation structure
 
+The aggregation structure can be supplied to `gig()` through its `structure` argument or added afterwards with `+ hierarchy()`. The two forms below are equivalent.
+
+```{r}
+#| label: structure
+#| eval: false
+gig(data, structure = (State / Region) * Purpose) + geom_features()
+
+gig(data) + geom_features() + hierarchy((State / Region) * Purpose)
 ```
 
+A `hierarchy()` object can also be created once and added to several plots of the same data.
 
-```{r echo = FALSE}
-# new_name <- c(
-#   "Experience Perth"                = "Destination Perth",
-#   "Launceston, Tamar and the North" = "Launceston and the North",
-#   "Wilderness West"                 = "West Coast",
-#   "Northern"                        = "Townsville",
-#   "Outback"                         = "Outback Queensland",
-#   "Kakadu Arnhem"                   = "Litchfield Kakadu Arnhem",
-#   "Murraylands"                     = "Murray River, Lakes and Coorong",
-#   "Melbourne East"                  = "Yarra Valley and Dandenong Ranges",
-#   "Upper Yarra"                     = "Yarra Valley and Dandenong Ranges",
-#   "Darling Downs"                   = "Central Queensland")   # pooled, split below
-# 
-# split_to <- c("Capricorn Coast", "Gladstone", "Queensland Country")
-# 
-# # Update region names
-# tourism_full <- bind_rows(tsibble::tourism, tourism_new) |> as_tibble() |>
-#   mutate(Region = recode(Region, !!!new_name)) |>
-#   summarise(Trips = sum(Trips), .by = c(Quarter, State, Region, Purpose))
-# 
-# # Share of each new region in 2018-2022, by purpose
-# region_share <- filter(tourism_full, Region %in% split_to) |>
-#   summarise(p = sum(Trips), .by = c(Region, Purpose)) |> mutate(p = p / sum(p), .by = Purpose)
-# 
-# # Split the pooled old series with those shares
-# tourism_split <- filter(tourism_full, Region == "Central Queensland") |> select(-Region) |>
-#   inner_join(region_share, by = "Purpose", relationship = "many-to-many") |> mutate(Trips = Trips * p, p = NULL)
-# 
-# tourism_hts <- bind_rows(filter(tourism_full, Region != "Central Queensland"), tourism_split) |>
-#   as_tsibble(index = Quarter, key = c(State, Region, Purpose)) |>
-#   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
-
-# tourism_hts <- tsibble::tourism |> 
-#   aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
+```{r}
+#| label: hierarchy-object
+tourism_structure <- hierarchy((State / Region) * Purpose)
+tourism_structure
 ```
 
-## Time series features plot
+## Feature space
 
-Features summarise the shape of each series in a small number of numeric values. A feature table is computed with `feasts` and passed to `gig()`, with the features of interest mapped to `x` and `y`. The layer `geom_features()` then draws one point for each series in the hierarchy.
+The feature-space plot displays each series as one point, positioned by two features of the series. The features are computed with `fabletools::features()`. Here `feat_stl()` gives the strength of trend and seasonality, together with several other features of the STL decomposition.
 
-```{r hts features}
-tourism_ft <- tourism_hts |>
-  features(Trips, feature_set(pkgs = "feasts"))
+```{r}
+#| label: features
+tourism_features <- tourism_hts |>
+  features(Trips, feat_stl)
 
-tourism_feasts <- gig(tourism_ft,
-    gig_aes(x = trend_strength, 
-            y = seasonal_strength_year),
-    structure = (State/Region)*Purpose) +
-  geom_features()
-
-tourism_feasts
-
+gig(tourism_features,
+    gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+  geom_features() +
+  tourism_structure
 ```
 
-## STL decomposition plot
+The `x` and `y` aesthetics set the initial axes. Any other numeric column of the data can be chosen from the menu on either axis. Points are coloured by their level in the aggregation structure, and selecting a node in the hierarchy widget highlights the corresponding series.
 
-The decomposition of each series into trend, seasonal and remainder components is computed upstream with `fabletools` and `feasts`. The components are mapped with the channels `trend`, `seasonality` and `remainder`, and `geom_stl()` displays the series together with its components.
+## STL decomposition
 
-```{r stl-components}
-stl_original <- tourism_hts |>
+The STL plot displays the observed series together with its trend, seasonal and remainder components. The components are computed with `feasts::STL()`. The `trend`, `seasonality` and `remainder` aesthetics must be mapped explicitly, so that no component is guessed from a column name.
+
+```{r}
+#| label: stl
+tourism_stl <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components()
 
-stl_scaled <- tourism_hts |>
+gig(tourism_stl,
+    gig_aes(x = Quarter, y = Trips, trend = trend,
+            seasonality = season_year, remainder = remainder)) +
+  geom_stl() +
+  tourism_structure
+```
+
+Series at different levels of the structure differ greatly in scale. The `scaled` argument of `geom_stl()` accepts a second table of components computed from standardised series, and the toolbar then switches between the original and the standardised scale.
+
+```{r}
+#| label: stl-scaled
+#| eval: false
+tourism_stl_scaled <- tourism_hts |>
   group_by_key() |>
-  mutate(Trips = as.numeric(scale(Trips))) |>
-  ungroup() |>
+  dplyr::mutate(Trips = as.numeric(scale(Trips))) |>
+  dplyr::ungroup() |>
   model(stl = STL(Trips)) |>
   components()
+
+gig(tourism_stl,
+    gig_aes(x = Quarter, y = Trips, trend = trend,
+            seasonality = season_year, remainder = remainder)) +
+  geom_stl(scaled = tourism_stl_scaled) +
+  tourism_structure
 ```
-
-```{r stldp}
-tourism_stl <- gig(
-  stl_original,
-  gig_aes(
-    x = Quarter,
-    y = Trips,
-    seasonality = season_year,
-    trend = trend,
-    remainder = remainder
-  ),
-  structure = (State / Region) * Purpose
-) +
-  geom_stl(scaled = stl_scaled)
-
-tourism_stl
-```
-
-Series at different levels of the hierarchy differ greatly in scale. A second decomposition is therefore computed on standardised series and supplied through the `scaled` argument, which allows the plot to switch between the original and the standardised scale.
 
 ## Sunburst
 
-The sunburst displays the hierarchy itself, with one ring for each level. It requires no mapping beyond the structure, and the data are supplied as a plain tibble
+The sunburst displays the aggregation structure itself. Each ring corresponds to one level of the structure, and each segment to one node at that level. Any table that contains the key columns of the aggregated and bottom-level series can be used, such as the table of features computed above.
 
-```{r sunburst}
-tourism_sunburst <- gig(tourism_hts, 
-    structure = (State/Region)*Purpose) +
-  geom_sunburst(labels = TRUE) 
-
-tourism_sunburst
-```
-
-## Coordinating multiple plots with `fridge()` in `fridge` `R` package
-
-Each `ggelato` plot contains a single geometry. Several views are combined by passing the plots to `fridge()` from the `fridge` package. The views share a common selection, so that choosing a node of the hierarchy in the sunburst highlights the corresponding series in the features plot and in the decomposition plot.
-
-:::{.column-screen}
 ```{r}
-fridge(tourism_stl,
-       tourism_feasts, 
-       tourism_sunburst, 
-       fullscreen = FALSE) 
+#| label: sunburst
+gig(tourism_features) +
+  geom_sunburst() +
+  tourism_structure
 ```
 
-:::
+Segment labels can be switched off initially with `geom_sunburst(labels = FALSE)` and toggled from the toolbar.
 
-## Summary
+## The hierarchy widget in existing plots
 
-A `ggelato` plot is built from the data, a mapping and a hierarchical structure, followed by one geometry. Features and decompositions are computed upstream with `feasts` and `fabletools`, which keeps the graphics layer separate from the modelling workflow. Multiple views are coordinated with `fridge()` rather than within a single plot.
+The hierarchy widget can also be added to line plots made with `plotly::ggplotly()` or with highcharter, through `add_hierarchy_plotly()` and `add_hierarchy_hc()` respectively. The plot must identify the key values of each series, as described in the help pages of these functions. The example below adds the widget to a highcharter plot.
 
-## Session information
+```{r}
+#| label: highcharter
+#| eval: false
+library(highcharter)
 
-```{r session-info}
-sessionInfo()
+tourism_lines <- data.frame(
+  Quarter = as.numeric(as.Date(tourism_hts$Quarter)),
+  State = as.character(tourism_hts$State),
+  Region = as.character(tourism_hts$Region),
+  Purpose = as.character(tourism_hts$Purpose),
+  Trips = tourism_hts$Trips
+)
+
+highchart() |>
+  hc_add_series(
+    tourism_lines, type = "line",
+    hcaes(x = Quarter, y = Trips, group = interaction(State, Region, Purpose))
+  ) |>
+  add_hierarchy_hc("(State/Region)*Purpose")
 ```
+
+## Saving plots and using them in Shiny
+
+A `gig` plot is drawn when it is printed. `gig_build()` returns the underlying htmlwidget, which can be saved as a standalone web page with `htmlwidgets::saveWidget()`. Each geom layer has a pair of Shiny functions, such as `geom_featuresOutput()` and `renderGeomFeatures()`.
+
+```{r}
+#| label: shiny
+#| eval: false
+library(shiny)
+
+ui <- fluidPage(geom_featuresOutput("features", height = "600px"))
+
+server <- function(input, output, session) {
+  output$features <- renderGeomFeatures(
+    gig(tourism_features,
+        gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+      geom_features() +
+      tourism_structure
+  )
+}
+
+shinyApp(ui, server)
+```
+
+## Coordinating several views
+
+A `gig()` plot contains a single geom layer. Several plots of the same data can be displayed together with the `fridge` package, which arranges them as movable windows that share one hierarchy widget and one selection.

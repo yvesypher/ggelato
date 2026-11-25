@@ -4,23 +4,29 @@
 \alias{geom_sunburst-shiny}
 \alias{geom_sunburstOutput}
 \alias{renderGeomSunburst}
-\title{Shiny bindings for a gig_sunburst plot}
+\title{Shiny bindings for geom_sunburst()}
 \usage{
 geom_sunburstOutput(outputId, width = "100\%", height = "400px")
 
 renderGeomSunburst(expr, env = parent.frame(), quoted = FALSE)
 }
 \arguments{
-\item{outputId}{output variable to read from}
+\item{outputId}{Output variable to read from.}
 
-\item{width, height}{Must be a valid CSS unit or a number}
+\item{width, height}{A valid CSS unit (such as \code{"100\%"} or \code{"400px"}) or a
+number, which is coerced to a string and has \code{"px"} appended.}
 
-\item{expr}{An expression that generates a \code{gig() + geom_sunburst()} widget}
+\item{expr}{An expression that generates a \code{gig() + geom_sunburst()} plot.}
 
-\item{env}{The environment in which to evaluate \code{expr}}
+\item{env}{The environment in which to evaluate \code{expr}.}
 
-\item{quoted}{Is \code{expr} a quoted expression?}
+\item{quoted}{Is \code{expr} a quoted expression (with \code{\link[=quote]{quote()}})?}
+}
+\value{
+\code{geom_sunburstOutput()} returns a Shiny output element and
+\code{renderGeomSunburst()} returns a Shiny render function.
 }
 \description{
-Shiny bindings for a gig_sunburst plot
+Output and render functions for using a \code{gig() + geom_sunburst()} plot
+within Shiny applications and interactive R Markdown documents.
 }

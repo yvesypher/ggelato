@@ -2,25 +2,54 @@
 % Please edit documentation in R/add_hierarchy_plotly.R
 \name{add_hierarchy_plotly}
 \alias{add_hierarchy_plotly}
-\title{Add an interactive hierarchy widget to a Plotly plot}
+\title{Add an interactive hierarchy widget to a plotly plot}
 \usage{
 add_hierarchy_plotly(plot, structure, width = NULL, height = NULL)
 }
 \arguments{
-\item{plot}{A plotly object to which the hierarchy will be added.}
+\item{plot}{A plotly htmlwidget returned by \code{\link[plotly:ggplotly]{plotly::ggplotly()}}.}
 
-\item{structure}{Hierarchy structure, e.g. "(State/Region)*Purpose".}
+\item{structure}{Aggregation structure as a string, such as
+\code{"(State/Region)*Purpose"}.}
 
 \item{width, height}{Output size (any valid CSS unit). When omitted, the
-original Plotly dimensions and sizing policy are preserved. In QMD/RMD,
-the original widget follows the document's global or per-chunk figure
-options.}
+original plotly dimensions and sizing policy are kept.}
 }
 \value{
-The plotly object with the hierarchy widget.
+The plotly htmlwidget with the hierarchy widget attached.
 }
 \description{
-Add a draggable, resizable hierarchy tree on an existing plotly
-widget for hierarchical time series. Levels can be reordered by dragging
-and toggled by clicking, and traces are restyled accordingly.
+Adds a draggable, resizable hierarchy widget to a line plot of a
+hierarchical or grouped time series made with \code{\link[plotly:ggplotly]{plotly::ggplotly()}}. Levels
+can be reordered by dragging and toggled by clicking, and the traces are
+restyled accordingly.
+}
+\details{
+Each trace must identify its series through its hover text, in the form
+\code{"State: Tasmania<br>Region: Hobart and the South<br>Purpose: Holiday"},
+with \verb{<aggregated>} for aggregated levels.
+}
+\examples{
+\dontshow{if (requireNamespace("plotly", quietly = TRUE) && requireNamespace("fabletools", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(ggplot2)
+
+tas_hts <- fabletools::aggregate_key(
+  aus_tourism[aus_tourism$State == "Tasmania", ],
+  (State / Region) * Purpose, Trips = sum(Trips)
+)
+tas_hts$series <- paste0(
+  "State: ", tas_hts$State, "<br>Region: ", tas_hts$Region,
+  "<br>Purpose: ", tas_hts$Purpose
+)
+
+tas_plot <- ggplot(as.data.frame(tas_hts),
+                   aes(x = as.Date(Quarter), y = Trips,
+                       group = series, text = series)) +
+  geom_line()
+add_hierarchy_plotly(plotly::ggplotly(tas_plot, tooltip = "text"),
+                     "(State/Region)*Purpose")
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+\code{\link[=add_hierarchy_hc]{add_hierarchy_hc()}}
 }

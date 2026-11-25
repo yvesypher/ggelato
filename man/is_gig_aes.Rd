@@ -15,3 +15,6 @@ is_gig_aes(x)
 \description{
 Is this object a gig aesthetic mapping?
 }
+\examples{
+is_gig_aes(gig_aes(x = Trips))
+}

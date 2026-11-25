@@ -13,11 +13,14 @@ geom_stl(
 )
 }
 \arguments{
-\item{mapping}{Mapping}
+\item{mapping}{Optional layer-level \code{\link[=gig_aes]{gig_aes()}} that overrides the plot
+mapping.}
 
-\item{scaled}{For scaled data}
+\item{scaled}{Optional table of STL components computed from standardised
+series, with the same columns as the plot data. When supplied, the
+toolbar can switch between the original and the standardised scale.}
 
-\item{width, height}{Optional explicit widget size (any valid CSS unit).}
+\item{width, height}{Optional widget size (any valid CSS unit).}
 
 \item{elementId}{Optional element id.}
 }
@@ -25,15 +28,27 @@ geom_stl(
 A \code{gig_layer}.
 }
 \description{
-STL decomposition layer
+Draws the observed series together with its trend, seasonal and remainder
+components from an STL decomposition. The \code{trend}, \code{seasonality} and
+\code{remainder} aesthetics must be mapped explicitly in \code{\link[=gig_aes]{gig_aes()}}.
 }
 \examples{
-\dontrun{
-gig(stl_cmp, gig_aes(x = Quarter, y = Trips, season = season_year)) +
+\dontshow{if (requireNamespace("feasts", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(fabletools)
+library(feasts)
+
+tas_tourism <- aus_tourism[aus_tourism$State == "Tasmania", ]
+tas_stl <- tas_tourism |>
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips)) |>
+  model(stl = STL(Trips)) |>
+  components()
+
+gig(tas_stl,
+    gig_aes(x = Quarter, y = Trips, trend = trend,
+            seasonality = season_year, remainder = remainder)) +
   geom_stl() +
   hierarchy((State / Region) * Purpose)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=gig]{gig()}}

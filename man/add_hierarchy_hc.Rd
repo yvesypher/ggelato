@@ -2,7 +2,7 @@
 % Please edit documentation in R/add_hierarchy_hc.R
 \name{add_hierarchy_hc}
 \alias{add_hierarchy_hc}
-\title{Add an interactive hierarchy widget to a Highcharts plot}
+\title{Add an interactive hierarchy widget to a highcharter plot}
 \usage{
 add_hierarchy_hc(
   plot,
@@ -13,22 +13,55 @@ add_hierarchy_hc(
 )
 }
 \arguments{
-\item{plot}{A highchart/htmlwidget object.}
+\item{plot}{A highcharter htmlwidget.}
 
-\item{structure}{Hierarchy structure, e.g. "(State/Region)*Purpose".}
+\item{structure}{Aggregation structure as a string, such as
+\code{"(State/Region)*Purpose"}.}
 
-\item{time_labels}{How to label a numeric x axis that holds day-numbers}
+\item{time_labels}{How to label a numeric x axis holding day numbers.
+\code{"auto"} detects quarterly, monthly, yearly or daily spacing.}
 
 \item{width, height}{Output size (any valid CSS unit). When omitted, the
-original Highcharter dimensions and sizing policy are preserved. In
-QMD/RMD, the original widget follows the document's global or per-chunk
-figure options.}
+original highcharter dimensions and sizing policy are kept.}
 }
 \value{
-The plotly object with the hierarchy widget.
+The highcharter htmlwidget with the hierarchy widget attached.
 }
 \description{
-Add a draggable, resizable hierarchy tree on an existing highcharts
-widget for hierarchical time series. Levels can be reordered by dragging
-and toggled by clicking, and traces are restyled accordingly.
+Adds a draggable, resizable hierarchy widget to an existing highcharter
+line plot of a hierarchical or grouped time series. Levels can be reordered
+by dragging and toggled by clicking, and the series are restyled
+accordingly.
+}
+\details{
+The key columns named in \code{structure} must be kept in the data passed to
+\code{\link[highcharter:hc_add_series]{highcharter::hc_add_series()}}, so that every series can be matched to its
+position in the hierarchy.
+}
+\examples{
+\dontshow{if (requireNamespace("fabletools", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(highcharter)
+
+tas_hts <- fabletools::aggregate_key(
+  aus_tourism[aus_tourism$State == "Tasmania", ],
+  (State / Region) * Purpose, Trips = sum(Trips)
+)
+tas_hts <- data.frame(
+  Quarter = as.numeric(as.Date(tas_hts$Quarter)),
+  State = as.character(tas_hts$State),
+  Region = as.character(tas_hts$Region),
+  Purpose = as.character(tas_hts$Purpose),
+  Trips = tas_hts$Trips
+)
+
+tas_plot <- highchart() |>
+  hc_add_series(
+    tas_hts, type = "line",
+    hcaes(x = Quarter, y = Trips, group = interaction(State, Region, Purpose))
+  )
+add_hierarchy_hc(tas_plot, "(State/Region)*Purpose")
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+\code{\link[=add_hierarchy_plotly]{add_hierarchy_plotly()}}
 }

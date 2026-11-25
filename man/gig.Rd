@@ -7,48 +7,54 @@
 gig(data, mapping = gig_aes(), structure = NULL)
 }
 \arguments{
-\item{data}{A data frame. For \code{\link[=geom_features]{geom_features()}} one row per series
-(hierarchy key columns plus numeric feature columns); for
-\code{\link[=geom_stl]{geom_stl()}} an STL components table; for
-\code{\link[=geom_sunburst]{geom_sunburst()}} any table carrying the hierarchy key columns.}
+\item{data}{A data frame. For \code{\link[=geom_features]{geom_features()}}, one row per series
+containing the key columns and numeric feature columns. For
+\code{\link[=geom_stl]{geom_stl()}}, a table of STL components. For \code{\link[=geom_sunburst]{geom_sunburst()}}, any
+table containing the key columns.}
 
 \item{mapping}{A \code{\link[=gig_aes]{gig_aes()}} mapping. Layers may override it.}
 
-\item{structure}{Optional hierarchy structure, written directly rather
-than wrapped in \code{\link[=hierarchy]{hierarchy()}}: a bare algebra expression,
-\code{(State / Region) * Purpose}, a string,
-\code{"(State/Region)*Purpose"}, or an existing \code{hierarchy()} object.
-Equivalent to (and overridden by) adding \code{+ hierarchy(...)}
-afterwards.}
+\item{structure}{Optional aggregation structure. Either a bare expression
+such as \code{(State / Region) * Purpose}, a string such as
+\code{"(State/Region)*Purpose"}, or a \code{\link[=hierarchy]{hierarchy()}} object. Adding
+\code{+ hierarchy(...)} afterwards overrides it.}
 }
 \value{
 An object of class \code{gig}.
 }
 \description{
-\itemize{
-\item a \verb{geom_*()} layer - \code{\link[=geom_features]{geom_features()}}, \code{\link[=geom_stl]{geom_stl()}},
-\code{\link[=geom_sunburst]{geom_sunburst()}}
-\item a \code{\link[=hierarchy]{hierarchy()}} specification, if not already supplied via
-\code{structure} below
-\item a \code{\link[=gig_aes]{gig_aes()}} mapping, merged into the plot mapping
-\item a \code{\link[=theme_gig]{theme_gig()}}
+\code{gig()} starts a plot of a hierarchical or grouped time series. It holds the
+data, the default aesthetic mapping and, optionally, the aggregation
+structure. Components are then added with \code{+}:
 }
+\details{
+\itemize{
+\item one \verb{geom_*()} layer, \code{\link[=geom_features]{geom_features()}}, \code{\link[=geom_stl]{geom_stl()}} or
+\code{\link[=geom_sunburst]{geom_sunburst()}};
+\item a \code{\link[=hierarchy]{hierarchy()}} specification, if it was not supplied through
+\code{structure};
+\item a \code{\link[=gig_aes]{gig_aes()}} mapping, which is merged into the plot mapping.
+}
+
+The plot is drawn when it is printed. Use \code{\link[=gig_build]{gig_build()}} to obtain the
+underlying htmlwidget, for example to save it with
+\code{\link[htmlwidgets:saveWidget]{htmlwidgets::saveWidget()}}.
 }
 \examples{
-\dontrun{
+\dontshow{if (requireNamespace("feasts", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(fabletools)
 library(feasts)
-library(tsibble)
 
-tourism_ft <- tourism |>
+tas_tourism <- aus_tourism[aus_tourism$State == "Tasmania", ]
+tas_features <- tas_tourism |>
   aggregate_key((State / Region) * Purpose, Trips = sum(Trips)) |>
-  features(Trips, feature_set(pkgs = "feasts"))
+  features(Trips, feat_stl)
 
-gig(tourism_ft, gig_aes(x = trend_strength, y = seasonal_strength_year),
+gig(tas_features,
+    gig_aes(x = trend_strength, y = seasonal_strength_year),
     structure = (State / Region) * Purpose) +
   geom_features()
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=gig_aes]{gig_aes()}}, \code{\link[=hierarchy]{hierarchy()}}, \code{\link[=gig_build]{gig_build()}}

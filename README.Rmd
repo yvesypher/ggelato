@@ -13,16 +13,22 @@ knitr::opts_chunk$set(
 )
 ```
 
-# ggelato <img src="man/figures/logo.png" align="right" height="138" alt="ggplot2 website" />
+# ggelato <img src="man/figures/logo.png" align="right" height="138" alt="ggelato logo" />
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-`ggelato`, which stands for "Grammar of graphics for exploring and layering aggregated time-series objects", is an R package for interactively visualising hierarchical time series. User can interact directly with all elements on the plot or with the assistance of the toolbar and hierarchy widget.
+`ggelato` (Grammar of Graphics for Exploring and Layering Aggregated Time series) provides interactive graphics for hierarchical and grouped time series. Plots are specified with a layered grammar in the style of `ggplot2`. Each plot includes a hierarchy widget for selecting, reordering and filtering the levels of the structure.
 
 ## Installation
 
-You can install the development version of ggelato from [GitHub](https://github.com/yvesypher/ggelato.git) with:
+Install the released version from CRAN with
+
+``` r
+install.packages("ggelato")
+```
+
+or the development version from GitHub with
 
 ``` r
 # install.packages("pak")
@@ -31,72 +37,21 @@ pak::pak("yvesypher/ggelato")
 
 ## Example
 
-```r
+``` r
 library(ggelato)
 library(fabletools)
 library(feasts)
-library(tsibble)
-library(dplyr)
 
-tourism_hts <- tourism |>
-  aggregate_key((State / Region) * Purpose, 
-  Trips = sum(Trips))
+tourism_hts <- aus_tourism |>
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips))
 
-### Time series features plot
+tourism_features <- tourism_hts |>
+  features(Trips, feat_stl)
 
-tourism_ft <- tourism_hts |>
-  features(Trips, feature_set(pkgs = "feasts"))
-
-tourism_feasts <- gig(tourism_ft,
-    gig_aes(x = trend_strength, 
-            y = seasonal_strength_year),
-    structure = (State/Region)*Purpose) +
-  geom_features()
-
-tourism_feasts
-  
-### STL decomposition plot
-
-stl_original <- tourism_hts |>
-  model(stl = STL(Trips)) |>
-  components() |>
-  as_data_frame()
-
-stl_scaled <- tourism_hts |>
-  group_by_key() |>
-  mutate(Trips = as.numeric(scale(Trips))) |>
-  ungroup() |>
-  model(stl = STL(Trips)) |>
-  components() |>
-  as_tibble()
-
-tourism_stl <- gig(
-  stl_original,
-  gig_aes(
-    x = Quarter,
-    y = Trips,
-    seasonality = season_year,
-    trend = trend,
-    remainder = remainder
-  ),
-  structure = (State / Region) * Purpose
-) +
-  geom_stl(scaled = stl_scaled)
-
-tourism_stl
-
-### Sunburst
-tourism_sunburst <- gig(as_tibble(tourism_hts), 
-    structure = (State/Region)*Purpose) +
-  geom_sunburst(labels = TRUE) 
-
-tourism_sunburst
-
-### Coordinating multiple plots with `fridge()` in `fridge` `R` package
-
-fridge(tourism_stl,
-       tourism_feasts, 
-       tourism_sunburst, 
-       fullscreen = FALSE) 
+gig(tourism_features,
+    gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+  geom_features() +
+  hierarchy((State / Region) * Purpose)
 ```
 
+`geom_stl()` displays STL decompositions and `geom_sunburst()` displays the aggregation structure. Several plots can be coordinated with the [fridge](https://github.com/yvesypher/fridge) package. See `vignette("ggelato")` for a full introduction.

@@ -7,11 +7,11 @@
 geom_features(mapping = NULL, width = NULL, height = NULL, elementId = NULL)
 }
 \arguments{
-\item{mapping}{Optional layer-level \code{\link[=gig_aes]{gig_aes()}} overriding the plot
-mapping.}
+\item{mapping}{Optional layer-level \code{\link[=gig_aes]{gig_aes()}} that overrides the plot
+mapping. \code{x} and \code{y} give the initial feature columns.}
 
-\item{width, height}{Optional explicit widget size (any valid CSS unit).
-When omitted, sizing follows the usual htmlwidgets/knitr policy.}
+\item{width, height}{Optional widget size (any valid CSS unit). When
+omitted, sizing follows the htmlwidgets and knitr defaults.}
 
 \item{elementId}{Optional element id.}
 }
@@ -19,16 +19,24 @@ When omitted, sizing follows the usual htmlwidgets/knitr policy.}
 A \code{gig_layer}.
 }
 \description{
-Draws each series as a point in feature space (e.g. trend strength vs
-seasonal strength), where users can interact with the axis to change variables of time series features
+Draws each series as a point in a two-dimensional feature space, such as
+trend strength against seasonal strength. The variables on either axis can
+be changed interactively to any other numeric column of \code{data}.
 }
 \examples{
-\dontrun{
-gig(tourism_ft, gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+\dontshow{if (requireNamespace("feasts", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(fabletools)
+library(feasts)
+
+tas_tourism <- aus_tourism[aus_tourism$State == "Tasmania", ]
+tas_features <- tas_tourism |>
+  aggregate_key((State / Region) * Purpose, Trips = sum(Trips)) |>
+  features(Trips, feat_stl)
+
+gig(tas_features, gig_aes(x = trend_strength, y = seasonal_strength_year)) +
   geom_features() +
   hierarchy((State / Region) * Purpose)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=gig]{gig()}}
