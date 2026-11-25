@@ -80,7 +80,8 @@ tas_features <- tas_tourism |>
   features(Trips, feat_stl)
 
 gig(tas_features,
-    gig_aes(x = trend_strength, y = seasonal_strength_year),
-    structure = (State / Region) * Purpose) +
+  gig_aes(x = trend_strength, y = seasonal_strength_year),
+  structure = (State / Region) * Purpose
+) +
   geom_features()
 ```

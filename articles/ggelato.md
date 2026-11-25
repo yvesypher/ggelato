@@ -119,8 +119,10 @@ features of the STL decomposition.
 tourism_features <- tourism_hts |>
   features(Trips, feat_stl)
 
-gig(tourism_features,
-    gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+gig(
+  tourism_features,
+  gig_aes(x = trend_strength, y = seasonal_strength_year)
+) +
   geom_features() +
   tourism_structure
 ```
@@ -144,9 +146,13 @@ tourism_stl <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components()
 
-gig(tourism_stl,
-    gig_aes(x = Quarter, y = Trips, trend = trend,
-            seasonality = season_year, remainder = remainder)) +
+gig(
+  tourism_stl,
+  gig_aes(
+    x = Quarter, y = Trips, trend = trend,
+    seasonality = season_year, remainder = remainder
+  )
+) +
   geom_stl() +
   tourism_structure
 ```
@@ -167,9 +173,13 @@ tourism_stl_scaled <- tourism_hts |>
   model(stl = STL(Trips)) |>
   components()
 
-gig(tourism_stl,
-    gig_aes(x = Quarter, y = Trips, trend = trend,
-            seasonality = season_year, remainder = remainder)) +
+gig(
+  tourism_stl,
+  gig_aes(
+    x = Quarter, y = Trips, trend = trend,
+    seasonality = season_year, remainder = remainder
+  )
+) +
   geom_stl(scaled = tourism_stl_scaled) +
   tourism_structure
 ```
@@ -207,6 +217,9 @@ the widget to a highcharter plot.
 ``` r
 
 library(highcharter)
+#> Registered S3 method overwritten by 'quantmod':
+#>   method            from
+#>   as.zoo.data.frame zoo
 
 tourism_lines <- data.frame(
   Quarter = as.numeric(as.Date(tourism_hts$Quarter)),
@@ -218,7 +231,8 @@ tourism_lines <- data.frame(
 
 highchart() |>
   hc_add_series(
-    tourism_lines, type = "line",
+    tourism_lines,
+    type = "line",
     hcaes(x = Quarter, y = Trips, group = interaction(State, Region, Purpose))
   ) |>
   add_hierarchy_hc("(State/Region)*Purpose")
@@ -244,8 +258,10 @@ ui <- fluidPage(geom_featuresOutput("features", height = "600px"))
 
 server <- function(input, output, session) {
   output$features <- renderGeomFeatures(
-    gig(tourism_features,
-        gig_aes(x = trend_strength, y = seasonal_strength_year)) +
+    gig(
+      tourism_features,
+      gig_aes(x = trend_strength, y = seasonal_strength_year)
+    ) +
       geom_features() +
       tourism_structure
   )

@@ -31,7 +31,8 @@ depending on the geom layer.
 ``` r
 tas_hts <- fabletools::aggregate_key(
   aus_tourism[aus_tourism$State == "Tasmania", ],
-  (State / Region) * Purpose, Trips = sum(Trips)
+  (State / Region) * Purpose,
+  Trips = sum(Trips)
 )
 
 plot_spec <- gig(tas_hts, structure = (State / Region) * Purpose) +

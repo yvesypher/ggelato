@@ -23,6 +23,7 @@ within Shiny applications and interactive R Markdown documents."><meta property=
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/tourism-case-study.html">Australian tourism case study</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -80,6 +81,32 @@ number, which is coerced to a string and has <code>"px"</code> appended.</p></dd
 <code>renderGeomFeatures()</code> returns a Shiny render function.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># interactive() &amp;&amp; requireNamespace("feasts", quietly = TRUE)</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://fabletools.tidyverts.org/" class="external-link">fabletools</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://feasts.tidyverts.org/" class="external-link">feasts</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">tas_hts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://fabletools.tidyverts.org/reference/aggregate_key.html" class="external-link">aggregate_key</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">aus_tourism</span><span class="op">[</span><span class="va">aus_tourism</span><span class="op">$</span><span class="va">State</span> <span class="op">==</span> <span class="st">"Tasmania"</span>, <span class="op">]</span>,</span></span>
+<span class="r-in"><span>  <span class="op">(</span><span class="va">State</span> <span class="op">/</span> <span class="va">Region</span><span class="op">)</span> <span class="op">*</span> <span class="va">Purpose</span>, Trips <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">Trips</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">tas_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://fabletools.tidyverts.org/reference/features.html" class="external-link">features</a></span><span class="op">(</span><span class="va">tas_hts</span>, <span class="va">Trips</span>, <span class="va">feat_stl</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/fluidPage.html" class="external-link">fluidPage</a></span><span class="op">(</span><span class="fu">geom_featuresOutput</span><span class="op">(</span><span class="st">"features"</span>, height <span class="op">=</span> <span class="st">"600px"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">output</span><span class="op">$</span><span class="va">features</span> <span class="op">&lt;-</span> <span class="fu">renderGeomFeatures</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="gig.html">gig</a></span><span class="op">(</span><span class="va">tas_features</span>,</span></span>
+<span class="r-in"><span>        <span class="fu"><a href="gig_aes.html">gig_aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">trend_strength</span>, y <span class="op">=</span> <span class="va">seasonal_strength_year</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="geom_features.html">geom_features</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="hierarchy.html">hierarchy</a></span><span class="op">(</span><span class="op">(</span><span class="va">State</span> <span class="op">/</span> <span class="va">Region</span><span class="op">)</span> <span class="op">*</span> <span class="va">Purpose</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

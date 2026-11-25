@@ -27,6 +27,7 @@ accordingly."><meta property="og:image" content="https://yvesypher.github.io/gge
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/tourism-case-study.html">Australian tourism case study</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -108,7 +109,8 @@ position in the hierarchy.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">tas_hts</span> <span class="op">&lt;-</span> <span class="fu">fabletools</span><span class="fu">::</span><span class="fu"><a href="https://fabletools.tidyverts.org/reference/aggregate_key.html" class="external-link">aggregate_key</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">aus_tourism</span><span class="op">[</span><span class="va">aus_tourism</span><span class="op">$</span><span class="va">State</span> <span class="op">==</span> <span class="st">"Tasmania"</span>, <span class="op">]</span>,</span></span>
-<span class="r-in"><span>  <span class="op">(</span><span class="va">State</span> <span class="op">/</span> <span class="va">Region</span><span class="op">)</span> <span class="op">*</span> <span class="va">Purpose</span>, Trips <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">Trips</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">(</span><span class="va">State</span> <span class="op">/</span> <span class="va">Region</span><span class="op">)</span> <span class="op">*</span> <span class="va">Purpose</span>,</span></span>
+<span class="r-in"><span>  Trips <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">Trips</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">tas_hts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  Quarter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="va">tas_hts</span><span class="op">$</span><span class="va">Quarter</span><span class="op">)</span><span class="op">)</span>,</span></span>
@@ -120,7 +122,8 @@ position in the hierarchy.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">tas_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://jkunst.com/highcharter/reference/highchart.html" class="external-link">highchart</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://jkunst.com/highcharter/reference/hc_add_series.html" class="external-link">hc_add_series</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="va">tas_hts</span>, type <span class="op">=</span> <span class="st">"line"</span>,</span></span>
+<span class="r-in"><span>    <span class="va">tas_hts</span>,</span></span>
+<span class="r-in"><span>    type <span class="op">=</span> <span class="st">"line"</span>,</span></span>
 <span class="r-in"><span>    <span class="fu"><a href="https://jkunst.com/highcharter/reference/hcaes.html" class="external-link">hcaes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Quarter</span>, y <span class="op">=</span> <span class="va">Trips</span>, group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/interaction.html" class="external-link">interaction</a></span><span class="op">(</span><span class="va">State</span>, <span class="va">Region</span>, <span class="va">Purpose</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">add_hierarchy_hc</span><span class="op">(</span><span class="va">tas_plot</span>, <span class="st">"(State/Region)*Purpose"</span><span class="op">)</span></span></span>
