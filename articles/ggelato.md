@@ -220,6 +220,8 @@ library(highcharter)
 #> Registered S3 method overwritten by 'quantmod':
 #>   method            from
 #>   as.zoo.data.frame zoo
+#> Highcharts (www.highcharts.com) is a Highsoft software product which is
+#> not free for commercial and Governmental use
 
 tourism_lines <- data.frame(
   Quarter = as.numeric(as.Date(tourism_hts$Quarter)),
